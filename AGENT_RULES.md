@@ -411,3 +411,53 @@ If a new shared type is needed, add it to the appropriate file:
 * audio.ts    — AudioBuffer, AudioChunk
 * transcript.ts — TranscriptResult, PasteResult
 * events.ts   — HotkeyEvent, AppStatus, StatusEvent
+
+⸻
+
+Git & Build Artifacts
+
+This rule applies to every agent, every stage, no exceptions.
+
+Never commit or push build artifacts.
+
+Forbidden paths — do NOT track or push:
+
+- target/
+- node_modules/
+- dist/
+- build/
+- .next/
+
+Pre-push checklist
+
+Before every push, verify:
+
+1. Check .gitignore exists and covers the paths above
+2. Run: git status — confirm no artifact directories are listed as staged or tracked
+3. If any forbidden path appears in git status, stop and fix before pushing
+
+If artifacts are already tracked
+
+Remove them from git without deleting local files:
+
+git rm -r --cached target/
+git rm -r --cached node_modules/
+git commit -m "chore: remove tracked build artifacts"
+
+Then ensure .gitignore covers those paths before pushing again.
+
+Minimum .gitignore for Rust projects
+
+/target/
+Cargo.lock (only for library crates — keep for binary/app crates)
+*.rs.bk
+.DS_Store
+
+For workspaces that also have a frontend (Node/React):
+
+node_modules/
+dist/
+build/
+.next/
+.env
+.env.local
