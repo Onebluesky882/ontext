@@ -307,6 +307,47 @@ Rules:
 
 ⸻
 
+Git & Build Artifacts
+
+THIS RULE IS MANDATORY FOR ALL AGENTS AT ALL STAGES.
+
+Never push build artifacts or generated directories.
+
+Forbidden paths — never commit or push:
+
+- target/
+- node_modules/
+- dist/
+- build/
+- .next/
+
+Pre-push checklist (run before every push):
+
+1. Verify .gitignore contains all artifact paths listed above
+2. Run: git status — confirm no artifact directories are tracked
+3. If any are tracked, remove them first (see below)
+
+If artifacts are already tracked:
+
+git rm -r --cached target/
+git rm -r --cached node_modules/
+git commit -m "fix: remove tracked build artifacts"
+
+Minimum .gitignore for a Rust project in this repo:
+
+/target
+Cargo.lock
+node_modules/
+dist/
+build/
+.next/
+*.env
+gate-outs/ must not be gitignored — it is required output.
+
+Violation: pushing target/ or node_modules/ breaks other agents' builds and wastes CI resources. This rule is non-negotiable.
+
+⸻
+
 Stop Condition
 
 After completing assigned work:

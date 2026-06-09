@@ -1,5 +1,10 @@
-/target/
+/target
+Cargo.lock
 node_modules/
+dist/
+build/
+.next/
+*.env
 .env
 .env.local
-dist/
+.DS_Store
