@@ -1,4 +1,4 @@
-# ADR 007 — Next.js Payment Portal with Stripe
+# ADR 008 — Next.js Payment Portal with Stripe
 
 ## Status
 

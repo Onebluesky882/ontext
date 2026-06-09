@@ -2,17 +2,22 @@
 
 ## ADR Numbering
 
-Before creating a new ADR in `docs/adrs/`, run:
+**MANDATORY — do this before creating any ADR, no exceptions:**
 
 ```bash
-ls docs/adrs/ | sort | tail -5
+ls docs/adrs/ | sort | tail -3
 ```
 
-Use the next number after the highest existing one. Never reuse or guess a number — always check the directory first.
+Take the highest number shown, add 1, use that as your ADR number.
 
-File naming: `NNN-short-slug.md` where NNN is zero-padded to 3 digits (e.g. `007-use-foo.md`).
+Rules:
+- Never guess or assume the next number
+- Never create a file without running the check above first
+- File name: `NNN-short-slug.md` (zero-padded to 3 digits)
+- Header inside the file must match the filename exactly:
+  ```
+  # ADR NNN — Title
+  ```
+- This rule applies in every worktree — the `docs/adrs/` directory is shared via git
 
-The ADR header inside the file must match the filename number:
-```
-# ADR NNN — Title
-```
+**Current highest:** 008 — next new ADR must be 009
