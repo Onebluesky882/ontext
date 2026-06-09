@@ -22,4 +22,11 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+ontext-hotkey    = { path = "../../../modules/hotkey" }
+ontext-audio     = { path = "../../../modules/audio" }
+ontext-vad       = { path = "../../../modules/vad" }
+ontext-transcribe = { path = "../../../modules/transcribe" }
+ontext-clipboard = { path = "../../../modules/clipboard" }
+tokio = { version = "1", features = ["full"] }
+dotenvy = "0.15"
 

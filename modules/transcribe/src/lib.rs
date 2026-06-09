@@ -34,13 +34,22 @@ pub async fn transcribe(
     chunks: Vec<AudioChunk>,
     api_key: &str,
 ) -> Result<TranscriptResult, TranscribeError> {
-    transcribe_with_base_url(chunks, api_key, "https://api.openai.com").await
+    transcribe_impl(chunks, api_key, "https://api.groq.com/openai", "whisper-large-v3-turbo").await
 }
 
 pub async fn transcribe_with_base_url(
     chunks: Vec<AudioChunk>,
     api_key: &str,
     base_url: &str,
+) -> Result<TranscriptResult, TranscribeError> {
+    transcribe_impl(chunks, api_key, base_url, "whisper-1").await
+}
+
+async fn transcribe_impl(
+    chunks: Vec<AudioChunk>,
+    api_key: &str,
+    base_url: &str,
+    model: &str,
 ) -> Result<TranscriptResult, TranscribeError> {
     let wav_bytes = encode_chunks_to_wav(&chunks)?;
 
@@ -56,7 +65,7 @@ pub async fn transcribe_with_base_url(
 
     let form = multipart::Form::new()
         .part("file", file_part)
-        .text("model", "whisper-1")
+        .text("model", model.to_string())
         .text("response_format", "verbose_json");
 
     let url = format!("{}/v1/audio/transcriptions", base_url);

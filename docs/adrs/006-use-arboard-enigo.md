@@ -1,4 +1,4 @@
-# ADR 004 — Use arboard and enigo for clipboard and paste simulation
+# ADR 006 — Use arboard and enigo for clipboard and paste simulation
 
 Status: Accepted
 
