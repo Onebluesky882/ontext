@@ -1,6 +1,6 @@
 # Stage 05 — clipboard
 
-Status: PENDING
+Status: DONE
 
 Domain: modules/clipboard
 Branch: feature/clipboard
@@ -8,9 +8,9 @@ Branch: feature/clipboard
 Goal:
 Write TranscriptResult.text to clipboard and paste into the active input field.
 
-Assigned To: —
-Started At: —
-Completed At: —
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-09
+Completed At: 2026-06-09
 
 ---
 
