@@ -1,6 +1,6 @@
 # Stage 01 — hotkey
 
-Status: PENDING
+Status: DONE
 
 Domain: modules/hotkey
 Branch: feature/hotkey
@@ -8,21 +8,21 @@ Branch: feature/hotkey
 Goal:
 Detect global hotkey press and release. Emit HotkeyEvent::Start on press, HotkeyEvent::Stop on release.
 
-Assigned To: —
-Started At: —
-Completed At: —
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-09
+Completed At: 2026-06-09
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
-- [ ] Implement modules/hotkey
-- [ ] Hotkey press emits HotkeyEvent::Start
-- [ ] Hotkey release emits HotkeyEvent::Stop
-- [ ] Works while another app is in focus
-- [ ] Unit tests pass
-- [ ] Build passes
-- [ ] Create gate-outs/stage-01-hotkey.md
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
+- [x] Implement modules/hotkey
+- [x] Hotkey press emits HotkeyEvent::Start
+- [x] Hotkey release emits HotkeyEvent::Stop
+- [x] Works while another app is in focus
+- [x] Unit tests pass
+- [x] Build passes
+- [x] Create gate-outs/stage-01-hotkey.md
 
 ---
 
