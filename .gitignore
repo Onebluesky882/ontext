@@ -5,4 +5,6 @@ dist/
 build/
 .next/
 *.env
+.env
+.env.local
 .DS_Store

@@ -1,6 +1,6 @@
 # Stage 03 — vad
 
-Status: PENDING
+Status: DONE
 
 Domain: modules/vad
 Branch: feature/vad
@@ -8,9 +8,9 @@ Branch: feature/vad
 Goal:
 Remove silence from AudioBuffer. Return only speech segments as Vec<AudioChunk>.
 
-Assigned To: —
-Started At: —
-Completed At: —
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-09
+Completed At: 2026-06-09
 
 ---
 

@@ -6,3 +6,8 @@ edition = "2021"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+cpal = "0.15"
+ontext-hotkey = { path = "../hotkey" }
+
+[dev-dependencies]
+approx = "0.5"
