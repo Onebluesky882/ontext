@@ -1,6 +1,6 @@
 # Stage 02 — audio
 
-Status: PENDING
+Status: DONE
 
 Domain: modules/audio
 Branch: feature/audio
@@ -8,9 +8,9 @@ Branch: feature/audio
 Goal:
 Open microphone on HotkeyEvent::Start. Stream PCM audio at 16kHz mono f32. Stop on HotkeyEvent::Stop.
 
-Assigned To: —
-Started At: —
-Completed At: —
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-09
+Completed At: 2026-06-09
 
 ---
 
