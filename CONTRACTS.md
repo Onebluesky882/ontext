@@ -74,9 +74,38 @@ pub struct PasteResult {
 
 ---
 
+## Serde / Tauri IPC Serialization
+
+All Rust structs passed through Tauri IPC must derive Serialize and Deserialize
+and use `rename_all = "camelCase"` so field names match the TypeScript types.
+
+```rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioBuffer {
+    pub samples: Vec<f32>,
+    pub sample_rate: u32,
+}
+```
+
+Field name mapping (Rust → TypeScript):
+
+| Rust (snake_case) | TypeScript (camelCase) |
+|-------------------|------------------------|
+| `sample_rate`     | `sampleRate`           |
+| `start_ms`        | `startMs`              |
+| `end_ms`          | `endMs`                |
+
+Do not skip `#[serde(rename_all = "camelCase")]`. Missing it will break Tauri IPC silently.
+
+---
+
 ## Rules
 
 - `sample_rate` is always `16000`. Do not change.
 - `text` in `TranscriptResult` must be trimmed (no leading/trailing whitespace).
 - `PasteResult.error` must be `None` on success, never an empty string.
+- All structs sent over Tauri IPC must use `#[serde(rename_all = "camelCase")]`.
 - If a contract appears incorrect: STOP and report. Do not invent a new contract.
