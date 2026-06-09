@@ -95,6 +95,59 @@ Reason:
 
 ---
 
+## Web Portal: Next.js (Pages Router)
+
+Decision: `app/web/` is a standalone Next.js app using the Pages Router.
+
+Reason:
+- Pages Router maps naturally to the clean architecture layers required (components/, hooks/, store/, pages/)
+- Simpler mental model for state-7 scope — no need for Server Components complexity
+- Compatible with next-auth v4 and Stripe redirect flow
+
+Do not switch to: App Router (requires significant restructuring), Remix, SvelteKit
+
+---
+
+## Payment: Stripe
+
+Decision: Use Stripe Checkout Sessions + Webhooks for subscription billing.
+
+Reason:
+- Industry standard, PCI compliant
+- Hosted checkout removes card data from our servers
+- Webhook events drive subscription lifecycle (created, updated, canceled)
+
+Price IDs: configured in `.env` (`STRIPE_PRO_PRICE_ID`, `STRIPE_TEAM_PRICE_ID`).
+
+Do not switch to: LemonSqueezy, Paddle (can be revisited if Stripe unavailable in target market)
+
+---
+
+## Auth (Web): NextAuth.js v4
+
+Decision: Use NextAuth.js v4 with JWT strategy for the web portal.
+
+Reason:
+- Integrates with Next.js API routes with minimal config
+- JWT strategy avoids requiring a session DB for MVP
+- Credentials provider is placeholder — swap for OAuth (Google/GitHub) when ready
+
+Do not switch to: Clerk, Auth0, Supabase Auth (evaluate post-MVP)
+
+---
+
+## Client State (Web): Zustand
+
+Decision: Use Zustand for auth and subscription state in the web portal.
+
+Reason:
+- Minimal boilerplate, works well with Next.js hydration
+- `persist` middleware handles localStorage rehydration
+
+Do not switch to: Redux, Jotai
+
+---
+
 ## Branch Strategy
 
 Decision: feature branches only. Never commit directly to `main` or `dev`.
