@@ -1,0 +1,10 @@
+[workspace]
+members = [
+  "app/ontext/src-tauri",
+  "modules/hotkey",
+  "modules/audio",
+  "modules/vad",
+  "modules/transcribe",
+  "modules/clipboard",
+]
+resolver = "2"

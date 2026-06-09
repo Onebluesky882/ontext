@@ -128,23 +128,47 @@ Acceptance Criteria:
 
 ## Gate-Out Format
 
-Each stage must produce `gate-outs/<stage>.md` before the next stage starts.
+Each stage must produce `gate-outs/stage-0X-<name>.md` before the next stage starts.
+The conductor parses this file to verify completion and trigger the next stage.
 
 ```
-Status: PASS | FAIL
-Stage:
-Domain:
-Summary:
-Modified Files:
-  - file1
-  - file2
-Dependencies Added:
+---
+status: PASS
+stage: 01
+domain: modules/hotkey
+branch: feature/hotkey
+assigned_to: claude-sonnet-4-6
+completed_at: 2026-06-09
+ready_for_next: YES
+---
+
+summary: implemented global hotkey detection using tauri-plugin-global-shortcut
+
+modified_files:
+  - modules/hotkey/src/lib.rs
+  - modules/hotkey/Cargo.toml
+
+dependencies_added:
+  - tauri-plugin-global-shortcut@2.0.0
+
+tests:
+  - test_hotkey_start_emits_event
+  - test_hotkey_stop_emits_event
+
+acceptance_criteria:
+  - PASS: Hotkey press emits HotkeyEvent::Start
+  - PASS: Hotkey release emits HotkeyEvent::Stop
+  - PASS: Works while another app is in focus
+
+known_issues:
   - none
-Tests:
-  - test_name
-Acceptance Criteria:
-  - Requirement 1
-Known Issues:
-  - none
-Ready For Next Stage: YES | NO
+
+recommendations:
+  - lib.rs needs to register hotkey module (orchestrator action)
 ```
+
+Field rules:
+- `status`: PASS or FAIL only
+- `ready_for_next`: YES or NO only
+- All list items use `-` prefix
+- Empty fields must say `none`

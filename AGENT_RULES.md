@@ -199,6 +199,46 @@ unless explicitly instructed.
 
 ⸻
 
+Protected Files (Orchestrator Only)
+
+Do NOT modify these files under any circumstances:
+
+* app/ontext/src-tauri/src/lib.rs
+* app/ontext/src-tauri/src/main.rs
+* Cargo.toml (workspace root)
+
+These files are owned by the orchestrator.
+The orchestrator wires all modules together after all stages complete.
+
+If your module needs to be registered in lib.rs:
+
+STOP
+
+Report in gate-out.md under Recommendations.
+Do not modify lib.rs yourself.
+
+⸻
+
+Cargo Rules
+
+Each module has its own Cargo.toml:
+
+modules/<name>/Cargo.toml
+
+Add dependencies only to your module's Cargo.toml.
+
+Do NOT modify:
+
+* Cargo.toml (workspace root)
+* app/ontext/src-tauri/Cargo.toml
+
+If you need a shared type from another module, import it as a path dependency:
+
+[dependencies]
+ontext-audio = { path = "../../modules/audio" }
+
+⸻
+
 Decision Rules
 
 DECISIONS.md is authoritative.
@@ -221,45 +261,49 @@ Stage Completion
 
 When work is complete, create:
 
-gate-out.md
+gate-outs/stage-0X-<name>.md
 
-Format:
+Use this exact format (conductor parses these fields):
 
-Status:
-PASS | FAIL
+---
+status: PASS
+stage: 01
+domain: modules/hotkey
+branch: feature/hotkey
+assigned_to: <model name>
+completed_at: <YYYY-MM-DD>
+ready_for_next: YES
+---
 
-Stage:
-Domain:
-Summary:
-Modified Files:
+summary: one line description of what was implemented
 
-* file1
-* file2
+modified_files:
+  - modules/hotkey/src/lib.rs
+  - modules/hotkey/Cargo.toml
 
-Dependencies Added:
+dependencies_added:
+  - none
 
-* none
+tests:
+  - test_hotkey_start_emits_event
+  - test_hotkey_stop_emits_event
 
-Tests:
+acceptance_criteria:
+  - PASS: Hotkey press emits HotkeyEvent::Start
+  - PASS: Hotkey release emits HotkeyEvent::Stop
 
-* test_a
-* test_b
+known_issues:
+  - none
 
-Acceptance Criteria:
+recommendations:
+  - none
 
-* Requirement 1
-* Requirement 2
-
-Known Issues:
-
-* none
-
-Recommendations:
-
-* optional
-
-Ready For Next Stage:
-YES | NO
+Rules:
+- status must be exactly PASS or FAIL
+- ready_for_next must be exactly YES or NO
+- Do not add extra fields
+- Do not use bullet points (*) — use hyphens (-) only
+- Do not leave fields empty — use "none" if nothing to report
 
 ⸻
 
