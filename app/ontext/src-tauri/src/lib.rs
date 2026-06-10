@@ -310,10 +310,21 @@ pub fn run() {
                         ..
                     } = event
                     {
-                        toggle_window(tray.app_handle());
+                        show_window(tray.app_handle());
                     }
                 })
                 .build(app)?;
+
+            // Intercept window close button — hide instead of quit.
+            if let Some(window) = app.get_webview_window("main") {
+                let w = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = w.hide();
+                    }
+                });
+            }
 
             Ok(())
         })
@@ -337,5 +348,13 @@ fn toggle_window(app: &tauri::AppHandle) {
             let _ = window.show();
             let _ = window.set_focus();
         }
+    }
+}
+
+fn show_window(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
     }
 }
