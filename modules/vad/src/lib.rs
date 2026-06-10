@@ -2,6 +2,101 @@ use ontext_audio::AudioBuffer;
 use serde::{Deserialize, Serialize};
 use webrtc_vad::{Vad, VadMode, SampleRate};
 
+// ---------------------------------------------------------------------------
+// Streaming VAD (RMS-based, processes mic chunks in real-time)
+// ---------------------------------------------------------------------------
+
+pub struct StreamingVad {
+    threshold: f32,
+    silence_ms: u64,
+    sample_rate: u32,
+    max_chunk_ms: u64,
+    min_chunk_ms: u64,
+
+    is_speaking: bool,
+    silence_samples: usize,
+    speech_buffer: Vec<f32>,
+    total_samples: usize,
+}
+
+impl Default for StreamingVad {
+    fn default() -> Self { Self::new() }
+}
+
+impl StreamingVad {
+    pub fn new() -> Self {
+        Self {
+            threshold: 0.02,
+            silence_ms: 1200,
+            sample_rate: 16000,
+            max_chunk_ms: 8000,
+            min_chunk_ms: 500,
+            is_speaking: false,
+            silence_samples: 0,
+            speech_buffer: Vec::new(),
+            total_samples: 0,
+        }
+    }
+
+    /// Feed a chunk of 16kHz f32 samples. Returns (final_chunk, _partial).
+    /// final_chunk is Some when a speech segment ends (silence detected or max length hit).
+    pub fn process(&mut self, samples: &[f32]) -> (Option<Vec<f32>>, Option<Vec<f32>>) {
+        let rms = rms(samples);
+        let silence_limit = self.ms_to_samples(self.silence_ms);
+        let max_limit = self.ms_to_samples(self.max_chunk_ms);
+        let min_limit = self.ms_to_samples(self.min_chunk_ms);
+
+        if rms > self.threshold {
+            self.is_speaking = true;
+            self.silence_samples = 0;
+            self.speech_buffer.extend_from_slice(samples);
+            self.total_samples += samples.len();
+
+            if self.total_samples >= max_limit {
+                return (self.do_flush(min_limit), None);
+            }
+            (None, None)
+        } else {
+            if self.is_speaking {
+                self.silence_samples += samples.len();
+                self.speech_buffer.extend_from_slice(samples);
+                self.total_samples += samples.len();
+
+                if self.silence_samples >= silence_limit || self.total_samples >= max_limit {
+                    return (self.do_flush(min_limit), None);
+                }
+            }
+            (None, None)
+        }
+    }
+
+    /// Flush any remaining speech when recording stops.
+    pub fn flush(&mut self) -> Option<Vec<f32>> {
+        let min_limit = self.ms_to_samples(self.min_chunk_ms);
+        self.do_flush(min_limit)
+    }
+
+    fn ms_to_samples(&self, ms: u64) -> usize {
+        (self.sample_rate as f32 * ms as f32 / 1000.0) as usize
+    }
+
+    pub fn is_speaking(&self) -> bool { self.is_speaking }
+
+    fn do_flush(&mut self, min_samples: usize) -> Option<Vec<f32>> {
+        self.is_speaking = false;
+        self.silence_samples = 0;
+        self.total_samples = 0;
+        let buf = std::mem::take(&mut self.speech_buffer);
+        if buf.len() < min_samples { None } else { Some(buf) }
+    }
+}
+
+fn rms(samples: &[f32]) -> f32 {
+    if samples.is_empty() { return 0.0; }
+    let sq: f32 = samples.iter().map(|s| s * s).sum();
+    (sq / samples.len() as f32).sqrt()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioChunk {

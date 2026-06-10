@@ -136,6 +136,91 @@ impl AudioCapture {
         Ok(())
     }
 
+    /// Start capturing and deliver resampled 16kHz f32 chunks to `on_chunk` in real-time.
+    /// Drop the `AudioCapture` to stop the stream.
+    pub fn start_with_callback<F>(&mut self, on_chunk: F) -> Result<(), AudioError>
+    where
+        F: Fn(Vec<f32>) + Send + Sync + 'static,
+    {
+        let host = cpal::default_host();
+        let device = host.default_input_device().ok_or(AudioError::NoInputDevice)?;
+        let supported = device
+            .default_input_config()
+            .map_err(|_| AudioError::UnsupportedFormat)?;
+        let device_rate = supported.sample_rate().0;
+
+        let config = StreamConfig {
+            channels: 1,
+            sample_rate: supported.sample_rate(),
+            buffer_size: cpal::BufferSize::Default,
+        };
+
+        let err_fn = |err| eprintln!("audio stream error: {err}");
+        let cb = Arc::new(on_chunk);
+
+        let stream = match supported.sample_format() {
+            SampleFormat::F32 => {
+                let cb = Arc::clone(&cb);
+                device.build_input_stream(
+                    &config,
+                    move |data: &[f32], _| {
+                        let s = if device_rate != TARGET_SAMPLE_RATE {
+                            resample(data, device_rate, TARGET_SAMPLE_RATE)
+                        } else {
+                            data.to_vec()
+                        };
+                        (*cb)(s);
+                    },
+                    err_fn,
+                    None,
+                )
+            }
+            SampleFormat::I16 => {
+                let cb = Arc::clone(&cb);
+                device.build_input_stream(
+                    &config,
+                    move |data: &[i16], _| {
+                        let f: Vec<f32> = data.iter().map(|&s| s as f32 / i16::MAX as f32).collect();
+                        let s = if device_rate != TARGET_SAMPLE_RATE {
+                            resample(&f, device_rate, TARGET_SAMPLE_RATE)
+                        } else {
+                            f
+                        };
+                        (*cb)(s);
+                    },
+                    err_fn,
+                    None,
+                )
+            }
+            SampleFormat::U16 => {
+                let cb = Arc::clone(&cb);
+                device.build_input_stream(
+                    &config,
+                    move |data: &[u16], _| {
+                        let f: Vec<f32> = data
+                            .iter()
+                            .map(|&s| (s as f32 / u16::MAX as f32) * 2.0 - 1.0)
+                            .collect();
+                        let s = if device_rate != TARGET_SAMPLE_RATE {
+                            resample(&f, device_rate, TARGET_SAMPLE_RATE)
+                        } else {
+                            f
+                        };
+                        (*cb)(s);
+                    },
+                    err_fn,
+                    None,
+                )
+            }
+            _ => return Err(AudioError::UnsupportedFormat),
+        }
+        .map_err(AudioError::StreamBuildError)?;
+
+        stream.play().map_err(AudioError::StreamPlayError)?;
+        self.stream = Some(stream);
+        Ok(())
+    }
+
     fn stop(&mut self) -> AudioBuffer {
         // dropping the stream stops recording
         self.stream = None;

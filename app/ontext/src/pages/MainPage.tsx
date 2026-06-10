@@ -1,14 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { usePipeline } from '../hooks/usePipeline'
-import { useSettings } from '../hooks/useSettings'
 import { useAppStore } from '../store/appStore'
 import { StatusBadge } from '../components/StatusBadge'
 import { ResultCard } from '../components/ResultCard'
 
 export function MainPage() {
-  const { status, start, reset } = usePipeline()
-  const { settings } = useSettings()
+  const { status, start, stop, reset } = usePipeline()
   const { lastText, errorMessage } = useAppStore()
+  const startedRef = useRef(false)
+
+  // Auto-start recording once on mount
+  useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
+    start()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Release mic when window closes / navigates away
+  useEffect(() => {
+    const handler = () => { stop() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [stop])
 
   // Auto-reset after 5 s so the UI stays clean
   useEffect(() => {
@@ -22,23 +35,21 @@ export function MainPage() {
       <section className="main-page__status">
         <StatusBadge status={status} />
         {status === 'running' && (
-          <p className="main-page__hint">
-            Hold <kbd>{settings.hotkeyLabel}</kbd> to record, release to transcribe
-          </p>
+          <p className="main-page__hint">Recording… click Stop to transcribe</p>
         )}
         {status === 'idle' && (
-          <p className="main-page__hint">Click Start, then hold your hotkey to record</p>
+          <p className="main-page__hint">Click Start Recording to begin</p>
         )}
       </section>
 
       <section className="main-page__controls">
         {status === 'idle' || status === 'done' || status === 'error' ? (
           <button className="btn btn--primary" onClick={start}>
-            Start Listening
+            Start Recording
           </button>
         ) : (
-          <button className="btn btn--secondary" disabled>
-            Pipeline Running…
+          <button className="btn btn--secondary" onClick={stop}>
+            Stop Recording
           </button>
         )}
       </section>

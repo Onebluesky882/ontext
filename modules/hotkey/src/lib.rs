@@ -18,9 +18,7 @@ pub enum HotkeyError {
     ListenError(String),
 }
 
-/// Tracks key state and detects the hotkey combo.
-/// macOS:   Ctrl + Space
-/// Windows: Ctrl + Space
+/// Tracks key state and detects the hotkey combo: Ctrl + Space on all platforms.
 pub struct HotkeyDetector {
     pressed: HashSet<String>,
     combo_active: bool,
@@ -55,14 +53,6 @@ impl HotkeyDetector {
         }
     }
 
-    #[cfg(target_os = "macos")]
-    fn combo_held(&self) -> bool {
-        let ctrl = self.pressed.contains("ControlLeft") || self.pressed.contains("ControlRight");
-        let space = self.pressed.contains("Space");
-        ctrl && space
-    }
-
-    #[cfg(not(target_os = "macos"))]
     fn combo_held(&self) -> bool {
         let ctrl = self.pressed.contains("ControlLeft") || self.pressed.contains("ControlRight");
         let space = self.pressed.contains("Space");
@@ -96,20 +86,32 @@ impl HotkeyListener {
 
         let handle = thread::spawn(move || {
             let detector = detector.clone();
-            let result = listen(move |event| {
-                let mut det = detector.lock().expect("detector mutex poisoned");
-                let hotkey_event = match event.event_type {
-                    EventType::KeyPress(key) => det.key_down(&key),
-                    EventType::KeyRelease(key) => det.key_up(&key),
-                    _ => None,
-                };
-                if let Some(ev) = hotkey_event {
-                    callback(ev);
-                }
-            });
+            // catch_unwind prevents an rdev panic (e.g. nil CGEventTap on macOS without
+            // Accessibility permission) from propagating and crashing the process.
+            let result =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    listen(move |event| {
+                        // recover from a poisoned mutex rather than panic
+                        let mut det = detector
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        let hotkey_event = match event.event_type {
+                            EventType::KeyPress(key) => det.key_down(&key),
+                            EventType::KeyRelease(key) => det.key_up(&key),
+                            _ => None,
+                        };
+                        if let Some(ev) = hotkey_event {
+                            callback(ev);
+                        }
+                    })
+                }));
 
-            if let Err(e) = result {
-                eprintln!("ontext-hotkey: rdev listen error: {:?}", e);
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => eprintln!("ontext-hotkey: rdev listen error: {:?}", e),
+                Err(_) => eprintln!(
+                    "ontext-hotkey: rdev listener panicked (check Accessibility permission)"
+                ),
             }
         });
 
@@ -121,111 +123,58 @@ impl HotkeyListener {
 mod tests {
     use super::*;
 
-    #[cfg(target_os = "macos")]
-    mod platform_tests {
-        use super::*;
-
-        #[test]
-        fn test_hotkey_start_emits_event() {
-            let mut det = HotkeyDetector::new();
-            assert_eq!(det.key_down(&Key::ControlLeft), None);
-            assert_eq!(det.key_down(&Key::Space), Some(HotkeyEvent::Start));
-        }
-
-        #[test]
-        fn test_hotkey_stop_emits_event() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlLeft);
-            det.key_down(&Key::Space);
-            assert_eq!(det.key_up(&Key::Space), Some(HotkeyEvent::Stop));
-        }
-
-        #[test]
-        fn test_no_event_without_full_combo() {
-            let mut det = HotkeyDetector::new();
-            assert_eq!(det.key_down(&Key::Space), None);
-        }
-
-        #[test]
-        fn test_start_only_emitted_once_while_held() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlLeft);
-            let first = det.key_down(&Key::Space);
-            let second = det.key_down(&Key::Space);
-            assert_eq!(first, Some(HotkeyEvent::Start));
-            assert_eq!(second, None);
-        }
-
-        #[test]
-        fn test_stop_only_emitted_once_after_release() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlLeft);
-            det.key_down(&Key::Space);
-            let first = det.key_up(&Key::Space);
-            let second = det.key_up(&Key::Space);
-            assert_eq!(first, Some(HotkeyEvent::Stop));
-            assert_eq!(second, None);
-        }
-
-        #[test]
-        fn test_right_modifier_keys_work() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlRight);
-            assert_eq!(det.key_down(&Key::Space), Some(HotkeyEvent::Start));
-        }
+    #[test]
+    fn test_hotkey_start_emits_event() {
+        let mut det = HotkeyDetector::new();
+        assert_eq!(det.key_down(&Key::ControlLeft), None);
+        assert_eq!(det.key_down(&Key::Space), Some(HotkeyEvent::Start));
     }
 
-    #[cfg(not(target_os = "macos"))]
-    mod platform_tests {
-        use super::*;
+    #[test]
+    fn test_hotkey_stop_emits_event() {
+        let mut det = HotkeyDetector::new();
+        det.key_down(&Key::ControlLeft);
+        det.key_down(&Key::Space);
+        assert_eq!(det.key_up(&Key::Space), Some(HotkeyEvent::Stop));
+    }
 
-        #[test]
-        fn test_hotkey_start_emits_event() {
-            let mut det = HotkeyDetector::new();
-            assert_eq!(det.key_down(&Key::ControlLeft), None);
-            assert_eq!(det.key_down(&Key::Space), Some(HotkeyEvent::Start));
-        }
+    #[test]
+    fn test_no_event_without_ctrl() {
+        let mut det = HotkeyDetector::new();
+        assert_eq!(det.key_down(&Key::Space), None);
+    }
 
-        #[test]
-        fn test_hotkey_stop_emits_event() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlLeft);
-            det.key_down(&Key::Space);
-            assert_eq!(det.key_up(&Key::Space), Some(HotkeyEvent::Stop));
-        }
+    #[test]
+    fn test_no_event_for_ctrl_alone() {
+        let mut det = HotkeyDetector::new();
+        assert_eq!(det.key_down(&Key::ControlLeft), None);
+    }
 
-        #[test]
-        fn test_no_event_without_full_combo() {
-            let mut det = HotkeyDetector::new();
-            assert_eq!(det.key_down(&Key::Space), None);
-        }
+    #[test]
+    fn test_start_only_emitted_once_while_held() {
+        let mut det = HotkeyDetector::new();
+        det.key_down(&Key::ControlLeft);
+        let first = det.key_down(&Key::Space);
+        let second = det.key_down(&Key::Space);
+        assert_eq!(first, Some(HotkeyEvent::Start));
+        assert_eq!(second, None);
+    }
 
-        #[test]
-        fn test_start_only_emitted_once_while_held() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlLeft);
-            let first = det.key_down(&Key::Space);
-            let second = det.key_down(&Key::Space);
-            assert_eq!(first, Some(HotkeyEvent::Start));
-            assert_eq!(second, None);
-        }
+    #[test]
+    fn test_stop_only_emitted_once_after_release() {
+        let mut det = HotkeyDetector::new();
+        det.key_down(&Key::ControlLeft);
+        det.key_down(&Key::Space);
+        let first = det.key_up(&Key::Space);
+        let second = det.key_up(&Key::Space);
+        assert_eq!(first, Some(HotkeyEvent::Stop));
+        assert_eq!(second, None);
+    }
 
-        #[test]
-        fn test_stop_only_emitted_once_after_release() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlLeft);
-            det.key_down(&Key::Space);
-            let first = det.key_up(&Key::Space);
-            let second = det.key_up(&Key::Space);
-            assert_eq!(first, Some(HotkeyEvent::Stop));
-            assert_eq!(second, None);
-        }
-
-        #[test]
-        fn test_right_modifier_keys_work() {
-            let mut det = HotkeyDetector::new();
-            det.key_down(&Key::ControlRight);
-            assert_eq!(det.key_down(&Key::Space), Some(HotkeyEvent::Start));
-        }
+    #[test]
+    fn test_right_ctrl_works() {
+        let mut det = HotkeyDetector::new();
+        det.key_down(&Key::ControlRight);
+        assert_eq!(det.key_down(&Key::Space), Some(HotkeyEvent::Start));
     }
 }
