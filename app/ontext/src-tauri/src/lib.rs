@@ -57,12 +57,70 @@ mod ax_permission {
     }
 }
 
+#[cfg(target_os = "macos")]
+mod focus {
+    use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication, NSWorkspace};
+    use objc2_foundation::NSString;
+
+    /// Bundle identifier of the frontmost (focused) app, if any.
+    pub fn frontmost_app_bundle_id() -> Option<String> {
+        let workspace = NSWorkspace::sharedWorkspace();
+        let app = workspace.frontmostApplication()?;
+        app.bundleIdentifier().map(|s| s.to_string())
+    }
+
+    /// Bundle identifier of this (ontext) process.
+    pub fn current_app_bundle_id() -> Option<String> {
+        let app = NSRunningApplication::currentApplication();
+        app.bundleIdentifier().map(|s| s.to_string())
+    }
+
+    /// Bring the app with the given bundle identifier back to the foreground.
+    pub fn activate_app(bundle_id: &str) {
+        let ns_bundle_id = NSString::from_str(bundle_id);
+        let apps = NSRunningApplication::runningApplicationsWithBundleIdentifier(&ns_bundle_id);
+        if let Some(app) = apps.firstObject() {
+            app.activateWithOptions(NSApplicationActivationOptions::ActivateAllWindows);
+        }
+    }
+}
+
 // Notified by `stop_recording` to signal an active pipeline to stop.
 // Uses notify_one so the permit persists even if nobody is waiting yet.
 static STOP_NOTIFY: OnceLock<Arc<Notify>> = OnceLock::new();
 
 fn get_stop_notify() -> Arc<Notify> {
     STOP_NOTIFY.get_or_init(|| Arc::new(Notify::new())).clone()
+}
+
+/// Bundle identifier of the app that was focused right before the user
+/// started interacting with ontext, kept up to date by a background poller
+/// in `run()`. Used to restore focus before each paste so Cmd+V lands in
+/// the user's app instead of ontext's own window.
+#[cfg(target_os = "macos")]
+static LAST_FOCUSED_APP: OnceLock<std::sync::Mutex<Option<String>>> = OnceLock::new();
+
+#[cfg(target_os = "macos")]
+fn last_focused_app() -> &'static std::sync::Mutex<Option<String>> {
+    LAST_FOCUSED_APP.get_or_init(|| std::sync::Mutex::new(None))
+}
+
+/// Paste `text` into whatever app the user was focused on before switching
+/// to ontext, restoring that app's focus first (macOS only).
+fn paste_text(text: &str) -> PasteResult {
+    #[cfg(target_os = "macos")]
+    {
+        let bundle_id = last_focused_app().lock().unwrap().clone();
+        if let Some(bundle_id) = bundle_id {
+            focus::activate_app(&bundle_id);
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    }
+
+    paste(ontext_clipboard::TranscriptResult {
+        text: text.to_string(),
+        language: String::new(),
+    })
 }
 
 #[tauri::command]
@@ -106,8 +164,12 @@ async fn record_and_transcribe(api_key: String) -> PasteResult {
     });
 
     let mut vad = StreamingVad::new();
-    let mut all_text: Vec<String> = Vec::new();
     let mut log_tick = 0u32;
+    let mut any_text = false;
+    let mut last_result = PasteResult {
+        success: false,
+        error: Some("no speech detected in recording".to_string()),
+    };
 
     'running: loop {
         // Drain all buffered audio chunks before sleeping
@@ -131,7 +193,8 @@ async fn record_and_transcribe(api_key: String) -> PasteResult {
                         match transcribe_samples(&speech, &api_key).await {
                             Ok(t) if !t.is_empty() => {
                                 eprintln!("[ontext] transcript: {:?}", t);
-                                all_text.push(t);
+                                any_text = true;
+                                last_result = paste_text(&t);
                             }
                             Ok(_) => eprintln!("[ontext] transcript: empty"),
                             Err(e) => eprintln!("[ontext] transcription error: {e}"),
@@ -165,7 +228,8 @@ async fn record_and_transcribe(api_key: String) -> PasteResult {
             if let Ok(t) = transcribe_samples(&speech, &api_key).await {
                 if !t.is_empty() {
                     eprintln!("[ontext] transcript (drain): {:?}", t);
-                    all_text.push(t);
+                    any_text = true;
+                    last_result = paste_text(&t);
                 }
             }
         }
@@ -178,24 +242,17 @@ async fn record_and_transcribe(api_key: String) -> PasteResult {
         if let Ok(t) = transcribe_samples(&speech, &api_key).await {
             if !t.is_empty() {
                 eprintln!("[ontext] transcript (flush): {:?}", t);
-                all_text.push(t);
+                any_text = true;
+                last_result = paste_text(&t);
             }
         }
     }
 
-    eprintln!("[ontext] all segments: {:?}", all_text);
-
-    if all_text.is_empty() {
-        return PasteResult {
-            success: false,
-            error: Some("no speech detected in recording".to_string()),
-        };
+    if !any_text {
+        eprintln!("[ontext] no speech segments detected");
     }
 
-    paste(ontext_clipboard::TranscriptResult {
-        text: all_text.join(" "),
-        language: String::new(),
-    })
+    last_result
 }
 
 /// Probability threshold above which a transcript is treated as a hallucination
@@ -275,6 +332,21 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            // Track the last non-ontext app the user had focused, so paste_text
+            // can restore focus to it before simulating Cmd+V.
+            #[cfg(target_os = "macos")]
+            {
+                let self_bundle_id = focus::current_app_bundle_id();
+                std::thread::spawn(move || loop {
+                    if let Some(front) = focus::frontmost_app_bundle_id() {
+                        if Some(&front) != self_bundle_id.as_ref() {
+                            *last_focused_app().lock().unwrap() = Some(front);
+                        }
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                });
+            }
 
             use tauri::{
                 image::Image,

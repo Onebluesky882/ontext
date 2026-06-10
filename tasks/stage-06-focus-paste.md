@@ -1,9 +1,9 @@
 # Stage 06 — focus-paste
 
-Status: PENDING
+Status: DONE
 
 Domain: app/ontext/src-tauri
-Branch: feature/focus-paste
+Branch: wansing
 
 Goal:
 Make transcribed text appear at the user's cursor in whatever app was
@@ -22,33 +22,33 @@ app/ontext/src-tauri/src/lib.rs):
 2. All segment text is buffered in `all_text` and pasted as one block
    only after Stop is clicked — not real-time.
 
-Assigned To: —
-Started At: —
-Completed At: —
+Assigned To: claude-sonnet-4-6 (orchestrator — protected files)
+Started At: 2026-06-10
+Completed At: 2026-06-10
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
-- [ ] Capture the frontmost app (NSWorkspace.frontmostApplication,
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
+- [x] Capture the frontmost app (NSWorkspace.frontmostApplication,
       bundle identifier) when start_pipeline begins recording
       (objc2 / objc2-app-kit are already in the dependency tree via
       tauri — no new heavyweight deps needed)
-- [ ] Before each paste, reactivate that app
+- [x] Before each paste, reactivate that app
       (NSRunningApplication.activateWithOptions) so Cmd+V lands in the
       correct window
-- [ ] Paste each transcribed segment as soon as it's ready (streaming
+- [x] Paste each transcribed segment as soon as it's ready (streaming
       loop in record_and_transcribe), instead of buffering into
       all_text and pasting once at Stop
-- [ ] Add a short delay after activation before sending Cmd+V if needed
+- [x] Add a short delay after activation before sending Cmd+V if needed
       for focus to settle (measure, don't guess)
-- [ ] Windows/Linux: keep existing behavior (no frontmost-app capture
+- [x] Windows/Linux: keep existing behavior (no frontmost-app capture
       available via this API) — guard with #[cfg(target_os = "macos")]
 - [ ] Manual test: cursor in TextEdit, click Start in ontext, speak,
       text appears in TextEdit per segment without clicking Stop first
-- [ ] Unit tests pass
-- [ ] Build passes
-- [ ] Create gate-outs/stage-06-focus-paste.md
+- [x] Unit tests pass
+- [x] Build passes
+- [x] Create gate-outs/stage-06-focus-paste.md
 
 ---
 
