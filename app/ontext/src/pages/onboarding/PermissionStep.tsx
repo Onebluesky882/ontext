@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 interface Props {
@@ -11,9 +12,14 @@ export function PermissionStep({ onDone, onBack }: Props) {
 
   const openSettings = async () => {
     try {
-      await openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
+      await invoke('request_accessibility_permission')
     } catch {
-      // fallback: show manual path
+      // fallback to opening System Settings manually
+      try {
+        await openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
+      } catch {
+        // show manual path hint below
+      }
     }
     setOpened(true)
   }
@@ -32,23 +38,17 @@ export function PermissionStep({ onDone, onBack }: Props) {
         <li className="ob-steps-list__item">
           <span className="ob-steps-list__num">1</span>
           <div>
-            Click <strong>"Open System Settings"</strong> below.
+            Click <strong>"Open System Settings"</strong> below — macOS will ask to open Accessibility settings.
           </div>
         </li>
         <li className="ob-steps-list__item">
           <span className="ob-steps-list__num">2</span>
           <div>
-            Go to <strong>Privacy & Security → Accessibility</strong>.
-          </div>
-        </li>
-        <li className="ob-steps-list__item">
-          <span className="ob-steps-list__num">3</span>
-          <div>
             Toggle <strong>ontext</strong> to <strong>ON</strong>. Enter your password if prompted.
           </div>
         </li>
         <li className="ob-steps-list__item">
-          <span className="ob-steps-list__num">4</span>
+          <span className="ob-steps-list__num">3</span>
           <div>
             Come back here and click <strong>"I've Granted Access"</strong>.
           </div>
