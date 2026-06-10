@@ -15,16 +15,16 @@ Completed At: 2026-06-09
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
-- [ ] Implement modules/clipboard
-- [ ] Text written to system clipboard
-- [ ] Paste simulated into active app (Cmd+V / Ctrl+V)
-- [ ] PasteResult.success is true on success
-- [ ] PasteResult.error is None on success (never empty string)
-- [ ] Failure returns descriptive error string
-- [ ] Unit tests pass
-- [ ] Build passes
-- [ ] Create gate-outs/stage-05-clipboard.md
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
+- [x] Implement modules/clipboard
+- [x] Text written to system clipboard
+- [x] Paste simulated into active app (Cmd+V / Ctrl+V)
+- [x] PasteResult.success is true on success
+- [x] PasteResult.error is None on success (never empty string)
+- [x] Failure returns descriptive error string
+- [x] Unit tests pass
+- [x] Build passes
+- [x] Create gate-outs/stage-05-clipboard.md
 
 ---
 
