@@ -64,15 +64,34 @@ mod ax_permission {
 static HOTKEY_TX: OnceLock<broadcast::Sender<HotkeyEvent>> = OnceLock::new();
 
 fn subscribe_hotkeys() -> Result<broadcast::Receiver<HotkeyEvent>, String> {
+    // get_or_init cannot return an error, so we initialise with a sentinel and
+    // detect failure after the fact.
+    static HOTKEY_INIT_FAILED: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+
     let tx = HOTKEY_TX.get_or_init(|| {
         let (tx, _) = broadcast::channel::<HotkeyEvent>(16);
         let tx2 = tx.clone();
-        HotkeyListener::start(move |event| {
+        match HotkeyListener::start(move |event| {
             let _ = tx2.send(event);
-        })
-        .expect("failed to start hotkey listener");
+        }) {
+            Ok(_listener) => {
+                // listener runs for the process lifetime; intentionally leaked
+            }
+            Err(e) => {
+                eprintln!("ontext: failed to start hotkey listener: {e}");
+                HOTKEY_INIT_FAILED.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        }
         tx
     });
+
+    if HOTKEY_INIT_FAILED.load(std::sync::atomic::Ordering::SeqCst) {
+        return Err(
+            "global hotkey listener failed to start — check Accessibility permission".to_string(),
+        );
+    }
+
     Ok(tx.subscribe())
 }
 
