@@ -5,7 +5,7 @@ interface Settings {
 }
 
 const STORAGE_KEY = 'ontext:settings'
-const defaults: Settings = { hotkeyLabel: '⌥Space' }
+const defaults: Settings = { hotkeyLabel: '⌃Space' }
 
 function load(): Settings {
   try {
