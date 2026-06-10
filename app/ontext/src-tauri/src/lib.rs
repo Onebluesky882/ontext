@@ -5,9 +5,73 @@ use ontext_transcribe::transcribe;
 use ontext_vad::process as vad_process;
 use tokio::sync::mpsc;
 
+#[cfg(target_os = "macos")]
+mod ax_permission {
+    use std::ffi::c_void;
+    use std::os::raw::{c_char, c_int};
+
+    type CFTypeRef = *const c_void;
+    type CFStringRef = *const c_void;
+    type CFBooleanRef = *const c_void;
+    type CFDictionaryRef = *const c_void;
+    type CFIndex = c_int;
+
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        static kCFBooleanTrue: CFBooleanRef;
+        static kCFTypeDictionaryKeyCallBacks: *const c_void;
+        static kCFTypeDictionaryValueCallBacks: *const c_void;
+        fn CFDictionaryCreate(
+            allocator: *const c_void,
+            keys: *mut CFTypeRef,
+            values: *mut CFTypeRef,
+            num_values: CFIndex,
+            key_callbacks: *const c_void,
+            value_callbacks: *const c_void,
+        ) -> CFDictionaryRef;
+        fn CFRelease(cf: CFTypeRef);
+    }
+
+    #[link(name = "ApplicationServices", kind = "framework")]
+    extern "C" {
+        static kAXTrustedCheckOptionPrompt: CFStringRef;
+        fn AXIsProcessTrustedWithOptions(options: CFDictionaryRef) -> bool;
+    }
+
+    pub fn request_with_prompt() -> bool {
+        unsafe {
+            let mut keys: [CFTypeRef; 1] = [kAXTrustedCheckOptionPrompt];
+            let mut values: [CFTypeRef; 1] = [kCFBooleanTrue];
+            let dict = CFDictionaryCreate(
+                std::ptr::null(),
+                keys.as_mut_ptr(),
+                values.as_mut_ptr(),
+                1,
+                kCFTypeDictionaryKeyCallBacks,
+                kCFTypeDictionaryValueCallBacks,
+            );
+            let trusted = AXIsProcessTrustedWithOptions(dict);
+            CFRelease(dict as CFTypeRef);
+            trusted
+        }
+    }
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+#[tauri::command]
+fn request_accessibility_permission() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        ax_permission::request_with_prompt()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        true
+    }
 }
 
 #[tauri::command]
@@ -124,7 +188,7 @@ pub fn run() {
     let _ = dotenvy::dotenv(); // load .env if present, ignore if missing
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, run_pipeline])
+        .invoke_handler(tauri::generate_handler![greet, run_pipeline, request_accessibility_permission])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
