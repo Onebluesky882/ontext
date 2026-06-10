@@ -2,10 +2,11 @@ import { useState } from 'react'
 
 interface Settings {
   hotkeyLabel: string
+  outputLanguage: string
 }
 
 const STORAGE_KEY = 'ontext:settings'
-const defaults: Settings = { hotkeyLabel: '⌃Space' }
+const defaults: Settings = { hotkeyLabel: '⌃Space', outputLanguage: 'en' }
 
 function load(): Settings {
   try {

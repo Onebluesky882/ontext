@@ -271,3 +271,221 @@ code {
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+/* ── Onboarding shell ── */
+.ob-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 40px 24px 60px;
+  overflow-y: auto;
+}
+
+/* ── Progress dots ── */
+.ob-progress {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 40px;
+}
+.ob-progress__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s, transform 0.2s;
+}
+.ob-progress__dot--active {
+  background: var(--accent);
+  transform: scale(1.25);
+}
+.ob-progress__dot--done {
+  background: var(--status-done);
+}
+
+/* ── Generic step layout ── */
+.ob-step {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ob-step__heading {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  text-align: center;
+}
+.ob-step__description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+.ob-step__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+.ob-step__footer .btn--primary {
+  flex: 1;
+}
+.ob-step__cta {
+  align-self: center;
+  padding: 12px 40px;
+  font-size: 16px;
+}
+
+/* ── Welcome step ── */
+.ob-welcome {
+  align-items: center;
+  text-align: center;
+}
+.ob-welcome__icon {
+  font-size: 64px;
+  line-height: 1;
+}
+.ob-welcome__title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+}
+.ob-welcome__subtitle {
+  font-size: 17px;
+  color: var(--text-secondary);
+  margin-top: -8px;
+}
+.ob-feature-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+.ob-feature-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.ob-feature-list__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ob-feature-list__item strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.ob-feature-list__item p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Language step ── */
+.ob-lang-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.ob-lang-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.ob-lang-card:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+.ob-lang-card--selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+.ob-lang-card__flag { font-size: 24px; }
+.ob-lang-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ob-lang-card__native {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ── Permission step ── */
+.ob-permission {
+  align-items: center;
+  text-align: center;
+}
+.ob-permission__icon {
+  font-size: 56px;
+  line-height: 1;
+}
+.ob-steps-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+.ob-steps-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.ob-steps-list__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ob-steps-list__item div {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.ob-permission__actions {
+  display: flex;
+  justify-content: center;
+}
+.ob-permission__actions .btn {
+  padding: 12px 32px;
+  font-size: 15px;
+}
+.ob-permission__hint {
+  font-size: 13px;
+  color: var(--status-done);
+  text-align: center;
+}
