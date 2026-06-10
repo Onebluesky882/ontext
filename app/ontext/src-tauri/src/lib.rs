@@ -202,6 +202,14 @@ async fn record_and_transcribe(api_key: String) -> PasteResult {
 /// on near-silent/noise audio rather than real speech.
 const NO_SPEECH_PROB_THRESHOLD: f32 = 0.5;
 
+/// avg_logprob below this is low-confidence enough to be a hallucination.
+const AVG_LOGPROB_THRESHOLD: f32 = -1.0;
+
+/// compression_ratio above this indicates repetitive/looping text — a
+/// classic Whisper hallucination pattern on silence/noise (OpenAI's
+/// documented heuristic threshold is 2.4).
+const COMPRESSION_RATIO_THRESHOLD: f32 = 2.4;
+
 async fn transcribe_samples(samples: &[f32], api_key: &str) -> Result<String, String> {
     let end_ms = (samples.len() as f64 / 16000.0 * 1000.0) as u64;
     let chunk = AudioChunk {
@@ -214,12 +222,15 @@ async fn transcribe_samples(samples: &[f32], api_key: &str) -> Result<String, St
         .map_err(|e| e.to_string())?;
 
     eprintln!(
-        "[ontext] confidence: no_speech_prob={:.3} avg_logprob={:.3} text={:?}",
-        result.no_speech_prob, result.avg_logprob, result.text
+        "[ontext] confidence: no_speech_prob={:.3} avg_logprob={:.3} compression_ratio={:.3} text={:?}",
+        result.no_speech_prob, result.avg_logprob, result.compression_ratio, result.text
     );
 
-    if result.no_speech_prob > NO_SPEECH_PROB_THRESHOLD {
-        eprintln!("[ontext] discarding likely hallucination (no_speech_prob > {NO_SPEECH_PROB_THRESHOLD})");
+    if result.no_speech_prob > NO_SPEECH_PROB_THRESHOLD
+        || result.avg_logprob < AVG_LOGPROB_THRESHOLD
+        || result.compression_ratio > COMPRESSION_RATIO_THRESHOLD
+    {
+        eprintln!("[ontext] discarding likely hallucination");
         return Ok(String::new());
     }
 

@@ -16,6 +16,10 @@ pub struct TranscriptResult {
     /// Average log-probability across segments. Closer to 0 is more confident,
     /// very negative values (e.g. < -1.0) indicate low-confidence/hallucinated text.
     pub avg_logprob: f32,
+    /// Average gzip compression ratio of segment text. Repetitive/looping
+    /// hallucinations compress much better than real speech; values above
+    /// ~2.4 indicate likely hallucination.
+    pub compression_ratio: f32,
 }
 
 #[derive(Debug, Error)]
@@ -36,6 +40,8 @@ struct WhisperSegment {
     avg_logprob: f32,
     #[serde(default)]
     no_speech_prob: f32,
+    #[serde(default)]
+    compression_ratio: f32,
 }
 
 #[derive(Deserialize)]
@@ -112,13 +118,23 @@ async fn transcribe_impl(
         .await
         .map_err(TranscribeError::HttpError)?;
 
-    let (no_speech_prob, avg_logprob) = if whisper_response.segments.is_empty() {
-        (0.0, 0.0)
+    let (no_speech_prob, avg_logprob, compression_ratio) = if whisper_response.segments.is_empty()
+    {
+        (0.0, 0.0, 0.0)
     } else {
         let count = whisper_response.segments.len() as f32;
         let no_speech_sum: f32 = whisper_response.segments.iter().map(|s| s.no_speech_prob).sum();
         let logprob_sum: f32 = whisper_response.segments.iter().map(|s| s.avg_logprob).sum();
-        (no_speech_sum / count, logprob_sum / count)
+        let compression_sum: f32 = whisper_response
+            .segments
+            .iter()
+            .map(|s| s.compression_ratio)
+            .sum();
+        (
+            no_speech_sum / count,
+            logprob_sum / count,
+            compression_sum / count,
+        )
     };
 
     Ok(TranscriptResult {
@@ -126,6 +142,7 @@ async fn transcribe_impl(
         language: whisper_response.language,
         no_speech_prob,
         avg_logprob,
+        compression_ratio,
     })
 }
 
