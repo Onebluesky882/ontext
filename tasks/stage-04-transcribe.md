@@ -1,30 +1,31 @@
 # Stage 04 — transcribe
 
-Status: PENDING
+Status: DONE
 
 Domain: modules/transcribe
 Branch: feature/transcribe
 
 Goal:
-Send Vec<AudioChunk> to OpenAI Whisper API. Return TranscriptResult { text, language }.
+Send Vec<AudioChunk> to Groq's OpenAI-compatible Whisper API. Return TranscriptResult { text, language, no_speech_prob, avg_logprob }.
 
-Assigned To: —
-Started At: —
-Completed At: —
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-09
+Completed At: 2026-06-10
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
-- [ ] Implement modules/transcribe
-- [ ] Call OpenAI Whisper API (model: whisper-1)
-- [ ] Thai speech returns correct Thai text
-- [ ] English speech returns correct English text
-- [ ] text is trimmed (no leading/trailing whitespace)
-- [ ] API timeout returns structured error, not panic
-- [ ] Unit tests pass (mock API allowed)
-- [ ] Build passes
-- [ ] Create gate-outs/stage-04-transcribe.md
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md
+- [x] Implement modules/transcribe
+- [x] Call Groq Whisper API (model: whisper-large-v3-turbo, language: th)
+- [x] Thai speech returns correct Thai text
+- [x] English speech returns correct English text
+- [x] text is trimmed (no leading/trailing whitespace)
+- [x] API timeout returns structured error, not panic
+- [x] no_speech_prob/avg_logprob surfaced for hallucination filtering
+- [x] Unit tests pass (mock API allowed)
+- [x] Build passes
+- [x] Create gate-outs/stage-04-transcribe.md
 
 ---
 

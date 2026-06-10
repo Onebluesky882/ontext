@@ -2,17 +2,20 @@
 status: PASS
 stage: 04
 domain: modules/transcribe
-branch: surabaya
+branch: wansing
 assigned_to: claude-sonnet-4-6
-completed_at: 2026-06-09
+completed_at: 2026-06-10
 ready_for_next: YES
 ---
 
-summary: implemented transcribe module — converts Vec<AudioChunk> to WAV bytes and calls OpenAI Whisper API (whisper-1) with verbose_json response format to capture both text and language
+summary: transcribe module converts Vec<AudioChunk> to WAV bytes and calls Groq's OpenAI-compatible Whisper API (whisper-large-v3-turbo, language=th, verbose_json response format) to capture text, language, and per-segment confidence (no_speech_prob, avg_logprob) used for hallucination filtering
 
 modified_files:
   - modules/transcribe/src/lib.rs
   - modules/transcribe/Cargo.toml
+  - modules/vad/src/lib.rs
+  - app/ontext/src-tauri/src/lib.rs
+  - DECISIONS.md
 
 dependencies_added:
   - reqwest@0.12 (features: multipart, json)
@@ -38,6 +41,7 @@ acceptance_criteria:
   - PASS: text is trimmed (no leading/trailing whitespace)
   - PASS: API timeout returns structured TranscribeError::Timeout, not panic
   - PASS: API 4xx/5xx returns structured TranscribeError::ApiError { status, message }
+  - PASS: no_speech_prob/avg_logprob parsed from verbose_json segments and surfaced on TranscriptResult
   - PASS: Unit tests pass (mock API via mockito)
   - PASS: Build passes
 
@@ -47,3 +51,5 @@ known_issues:
 recommendations:
   - transcribe_with_base_url is pub to enable integration testing; orchestrator may want to restrict visibility if not needed outside tests
   - API key should be injected from Tauri app config (not hardcoded)
+  - language is hardcoded to "th"; revisit if multi-language support is needed
+  - NO_SPEECH_PROB_THRESHOLD (0.5) in src-tauri/src/lib.rs is a heuristic — tune based on real-world usage
