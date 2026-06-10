@@ -3,12 +3,13 @@ use ontext_clipboard::{paste, PasteResult};
 use ontext_hotkey::{HotkeyEvent, HotkeyListener};
 use ontext_transcribe::transcribe;
 use ontext_vad::process as vad_process;
-use tokio::sync::mpsc;
+use std::sync::OnceLock;
+use tokio::sync::broadcast;
 
 #[cfg(target_os = "macos")]
 mod ax_permission {
     use std::ffi::c_void;
-    use std::os::raw::{c_char, c_int};
+    use std::os::raw::c_int;
 
     type CFTypeRef = *const c_void;
     type CFStringRef = *const c_void;
@@ -57,6 +58,24 @@ mod ax_permission {
     }
 }
 
+// One rdev::listen thread for the lifetime of the process.
+// rdev has no stop API, so starting a new thread per pipeline run would
+// accumulate zombie threads. Instead every run subscribes to this broadcaster.
+static HOTKEY_TX: OnceLock<broadcast::Sender<HotkeyEvent>> = OnceLock::new();
+
+fn subscribe_hotkeys() -> Result<broadcast::Receiver<HotkeyEvent>, String> {
+    let tx = HOTKEY_TX.get_or_init(|| {
+        let (tx, _) = broadcast::channel::<HotkeyEvent>(16);
+        let tx2 = tx.clone();
+        HotkeyListener::start(move |event| {
+            let _ = tx2.send(event);
+        })
+        .expect("failed to start hotkey listener");
+        tx
+    });
+    Ok(tx.subscribe())
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -86,12 +105,8 @@ async fn run_pipeline() -> PasteResult {
         }
     };
 
-    let (tx, mut rx) = mpsc::channel::<HotkeyEvent>(8);
-
-    let _listener = match HotkeyListener::start(move |event| {
-        let _ = tx.blocking_send(event);
-    }) {
-        Ok(l) => l,
+    let mut rx = match subscribe_hotkeys() {
+        Ok(r) => r,
         Err(e) => {
             return PasteResult {
                 success: false,
@@ -103,9 +118,10 @@ async fn run_pipeline() -> PasteResult {
     // Wait for hotkey press
     loop {
         match rx.recv().await {
-            Some(HotkeyEvent::Start) => break,
-            Some(HotkeyEvent::Stop) => continue,
-            None => {
+            Ok(HotkeyEvent::Start) => break,
+            Ok(HotkeyEvent::Stop) => continue,
+            Err(broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(broadcast::error::RecvError::Closed) => {
                 return PasteResult {
                     success: false,
                     error: Some("hotkey channel closed unexpectedly".to_string()),
@@ -134,9 +150,10 @@ async fn run_pipeline() -> PasteResult {
     // Wait for hotkey release
     loop {
         match rx.recv().await {
-            Some(HotkeyEvent::Stop) => break,
-            Some(HotkeyEvent::Start) => continue,
-            None => {
+            Ok(HotkeyEvent::Stop) => break,
+            Ok(HotkeyEvent::Start) => continue,
+            Err(broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(broadcast::error::RecvError::Closed) => {
                 return PasteResult {
                     success: false,
                     error: Some("hotkey channel closed unexpectedly".to_string()),
