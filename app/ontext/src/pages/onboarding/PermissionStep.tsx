@@ -7,6 +7,16 @@ interface Props {
   onBack: () => void
 }
 
+function IconLock() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="5" y="11" width="14" height="11" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function PermissionStep({ onDone, onBack }: Props) {
   const [opened, setOpened] = useState(false)
 
@@ -14,7 +24,6 @@ export function PermissionStep({ onDone, onBack }: Props) {
     try {
       await invoke('request_accessibility_permission')
     } catch {
-      // fallback to opening System Settings manually
       try {
         await openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
       } catch {
@@ -26,11 +35,13 @@ export function PermissionStep({ onDone, onBack }: Props) {
 
   return (
     <div className="ob-step ob-permission">
-      <div className="ob-permission__icon" aria-hidden>🔐</div>
+      <div className="ob-permission__icon-wrap">
+        <IconLock />
+      </div>
 
-      <h2 className="ob-step__heading">Accessibility Access Required</h2>
+      <h2 className="ob-step__heading">Accessibility Access</h2>
       <p className="ob-step__description">
-        ontext needs Accessibility permission to type transcribed text directly into any app on your Mac.
+        ontext needs Accessibility permission to type transcribed text into any app on your Mac.
         Your audio is never uploaded — everything runs locally.
       </p>
 
@@ -38,7 +49,7 @@ export function PermissionStep({ onDone, onBack }: Props) {
         <li className="ob-steps-list__item">
           <span className="ob-steps-list__num">1</span>
           <div>
-            Click <strong>"Open System Settings"</strong> below — macOS will ask to open Accessibility settings.
+            Click <strong>"Open System Settings"</strong> — macOS will open Accessibility settings.
           </div>
         </li>
         <li className="ob-steps-list__item">
@@ -63,7 +74,7 @@ export function PermissionStep({ onDone, onBack }: Props) {
 
       {opened && (
         <p className="ob-permission__hint">
-          Once you've enabled Accessibility for ontext, come back and continue.
+          ✓ Once you've enabled Accessibility for ontext, click continue below.
         </p>
       )}
 
