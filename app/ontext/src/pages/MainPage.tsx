@@ -6,7 +6,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { ResultCard } from '../components/ResultCard'
 
 export function MainPage() {
-  const { status, start, reset } = usePipeline()
+  const { status, start, stop, reset } = usePipeline()
   const { settings } = useSettings()
   const { lastText, errorMessage } = useAppStore()
 
@@ -23,22 +23,22 @@ export function MainPage() {
         <StatusBadge status={status} />
         {status === 'running' && (
           <p className="main-page__hint">
-            Hold <kbd>{settings.hotkeyLabel}</kbd> to record, release to transcribe
+            Recording… click Stop or release <kbd>{settings.hotkeyLabel}</kbd> to transcribe
           </p>
         )}
         {status === 'idle' && (
-          <p className="main-page__hint">Click Start, then hold your hotkey to record</p>
+          <p className="main-page__hint">Click Start Recording to begin</p>
         )}
       </section>
 
       <section className="main-page__controls">
         {status === 'idle' || status === 'done' || status === 'error' ? (
           <button className="btn btn--primary" onClick={start}>
-            Start Listening
+            Start Recording
           </button>
         ) : (
-          <button className="btn btn--secondary" disabled>
-            Pipeline Running…
+          <button className="btn btn--secondary" onClick={stop}>
+            Stop Recording
           </button>
         )}
       </section>
