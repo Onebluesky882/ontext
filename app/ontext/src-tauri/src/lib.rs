@@ -205,7 +205,67 @@ pub fn run() {
     let _ = dotenvy::dotenv(); // load .env if present, ignore if missing
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            use tauri::{
+                image::Image,
+                menu::{MenuBuilder, MenuItemBuilder},
+                tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+                Manager,
+            };
+
+            let show_item = MenuItemBuilder::new("Show / Hide").id("toggle").build(app)?;
+            let quit_item = MenuItemBuilder::new("Quit").id("quit").build(app)?;
+            let menu = MenuBuilder::new(app)
+                .items(&[&show_item, &quit_item])
+                .build()?;
+
+            let icon = Image::from_path(
+                app.path()
+                    .resource_dir()
+                    .unwrap_or_default()
+                    .join("icons/icon.png"),
+            )
+            .unwrap_or_else(|_| app.default_window_icon().unwrap().clone());
+
+            TrayIconBuilder::new()
+                .icon(icon)
+                .menu(&menu)
+                .tooltip("ontext")
+                .on_menu_event(|app, event| match event.id().as_ref() {
+                    "toggle" => toggle_window(app),
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        toggle_window(tray.app_handle());
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![greet, run_pipeline, request_accessibility_permission])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn toggle_window(app: &tauri::AppHandle) {
+    use tauri::Manager;
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_visible().unwrap_or(false) {
+            let _ = window.hide();
+        } else {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }
 }
