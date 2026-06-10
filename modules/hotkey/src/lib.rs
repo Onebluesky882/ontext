@@ -86,20 +86,32 @@ impl HotkeyListener {
 
         let handle = thread::spawn(move || {
             let detector = detector.clone();
-            let result = listen(move |event| {
-                let mut det = detector.lock().expect("detector mutex poisoned");
-                let hotkey_event = match event.event_type {
-                    EventType::KeyPress(key) => det.key_down(&key),
-                    EventType::KeyRelease(key) => det.key_up(&key),
-                    _ => None,
-                };
-                if let Some(ev) = hotkey_event {
-                    callback(ev);
-                }
-            });
+            // catch_unwind prevents an rdev panic (e.g. nil CGEventTap on macOS without
+            // Accessibility permission) from propagating and crashing the process.
+            let result =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    listen(move |event| {
+                        // recover from a poisoned mutex rather than panic
+                        let mut det = detector
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        let hotkey_event = match event.event_type {
+                            EventType::KeyPress(key) => det.key_down(&key),
+                            EventType::KeyRelease(key) => det.key_up(&key),
+                            _ => None,
+                        };
+                        if let Some(ev) = hotkey_event {
+                            callback(ev);
+                        }
+                    })
+                }));
 
-            if let Err(e) = result {
-                eprintln!("ontext-hotkey: rdev listen error: {:?}", e);
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => eprintln!("ontext-hotkey: rdev listen error: {:?}", e),
+                Err(_) => eprintln!(
+                    "ontext-hotkey: rdev listener panicked (check Accessibility permission)"
+                ),
             }
         });
 

@@ -3,8 +3,8 @@ use ontext_clipboard::{paste, PasteResult};
 use ontext_hotkey::{HotkeyEvent, HotkeyListener};
 use ontext_transcribe::transcribe;
 use ontext_vad::process as vad_process;
-use std::sync::OnceLock;
-use tokio::sync::broadcast;
+use std::sync::{Arc, OnceLock};
+use tokio::sync::{broadcast, Notify};
 
 #[cfg(target_os = "macos")]
 mod ax_permission {
@@ -63,6 +63,13 @@ mod ax_permission {
 // accumulate zombie threads. Instead every run subscribes to this broadcaster.
 static HOTKEY_TX: OnceLock<broadcast::Sender<HotkeyEvent>> = OnceLock::new();
 
+// Notified by `stop_recording` to signal an active pipeline to stop.
+static STOP_NOTIFY: OnceLock<Arc<Notify>> = OnceLock::new();
+
+fn get_stop_notify() -> Arc<Notify> {
+    STOP_NOTIFY.get_or_init(|| Arc::new(Notify::new())).clone()
+}
+
 fn subscribe_hotkeys() -> Result<broadcast::Receiver<HotkeyEvent>, String> {
     // get_or_init cannot return an error, so we initialise with a sentinel and
     // detect failure after the fact.
@@ -112,53 +119,23 @@ fn request_accessibility_permission() -> bool {
     }
 }
 
-#[tauri::command]
-async fn run_pipeline() -> PasteResult {
-    let api_key = match std::env::var("VITE_GROQ") {
-        Ok(k) => k,
-        Err(_) => {
-            return PasteResult {
-                success: false,
-                error: Some("VITE_GROQ not set in environment".to_string()),
-            }
-        }
-    };
+/// Record audio until a stop signal arrives (hotkey release OR `stop_recording` command),
+/// then transcribe and paste. Audio capture must start on a blocking thread because
+/// `cpal::Stream` is `!Send` and must not cross `.await` points.
+async fn record_and_transcribe(api_key: String) -> PasteResult {
+    // Optional hotkey receiver — if the listener failed we continue UI-only.
+    let hotkey_rx = subscribe_hotkeys().ok();
+    let stop_notify = get_stop_notify();
 
-    let mut rx = match subscribe_hotkeys() {
-        Ok(r) => r,
-        Err(e) => {
-            return PasteResult {
-                success: false,
-                error: Some(format!("hotkey listener failed: {e}")),
-            }
-        }
-    };
-
-    // Wait for hotkey press
-    loop {
-        match rx.recv().await {
-            Ok(HotkeyEvent::Start) => break,
-            Ok(HotkeyEvent::Stop) => continue,
-            Err(broadcast::error::RecvError::Lagged(_)) => continue,
-            Err(broadcast::error::RecvError::Closed) => {
-                return PasteResult {
-                    success: false,
-                    error: Some("hotkey channel closed unexpectedly".to_string()),
-                }
-            }
-        }
-    }
-
-    // AudioCapture holds cpal::Stream (!Send), so keep it entirely inside
-    // spawn_blocking — it never crosses an .await boundary this way.
     let (stop_tx, stop_rx) = std::sync::mpsc::channel::<()>();
 
+    // AudioCapture holds cpal::Stream (!Send); keep entirely inside spawn_blocking.
     let audio_task = tokio::task::spawn_blocking(move || {
         let mut audio = AudioCapture::new();
         if let Err(e) = audio.handle(HotkeyEvent::Start) {
             return Err(format!("audio capture failed to start: {e}"));
         }
-        let _ = stop_rx.recv(); // block until hotkey release
+        let _ = stop_rx.recv();
         match audio.handle(HotkeyEvent::Stop) {
             Ok(Some(b)) => Ok(b),
             Ok(None) => Err("audio capture returned no buffer".to_string()),
@@ -166,19 +143,26 @@ async fn run_pipeline() -> PasteResult {
         }
     });
 
-    // Wait for hotkey release
-    loop {
-        match rx.recv().await {
-            Ok(HotkeyEvent::Stop) => break,
-            Ok(HotkeyEvent::Start) => continue,
-            Err(broadcast::error::RecvError::Lagged(_)) => continue,
-            Err(broadcast::error::RecvError::Closed) => {
-                return PasteResult {
-                    success: false,
-                    error: Some("hotkey channel closed unexpectedly".to_string()),
+    // Wait for stop signal from hotkey release OR the stop_recording command.
+    let hotkey_stop = async {
+        if let Some(mut rx) = hotkey_rx {
+            loop {
+                match rx.recv().await {
+                    Ok(HotkeyEvent::Stop) => break,
+                    Ok(HotkeyEvent::Start) | Err(broadcast::error::RecvError::Lagged(_)) => {
+                        continue
+                    }
+                    Err(broadcast::error::RecvError::Closed) => break,
                 }
             }
+        } else {
+            std::future::pending::<()>().await
         }
+    };
+
+    tokio::select! {
+        _ = hotkey_stop => {}
+        _ = stop_notify.notified() => {}
     }
 
     let _ = stop_tx.send(());
@@ -212,11 +196,72 @@ async fn run_pipeline() -> PasteResult {
         }
     };
 
-    // ontext_transcribe::TranscriptResult and ontext_clipboard::TranscriptResult are separate types
     paste(ontext_clipboard::TranscriptResult {
         text: transcript.text,
         language: transcript.language,
     })
+}
+
+/// Hotkey-driven pipeline: arms the listener and waits for Ctrl+Space before recording.
+#[tauri::command]
+async fn run_pipeline() -> PasteResult {
+    let api_key = match std::env::var("VITE_GROQ") {
+        Ok(k) => k,
+        Err(_) => {
+            return PasteResult {
+                success: false,
+                error: Some("VITE_GROQ not set in environment".to_string()),
+            }
+        }
+    };
+
+    let mut rx = match subscribe_hotkeys() {
+        Ok(r) => r,
+        Err(e) => {
+            return PasteResult {
+                success: false,
+                error: Some(format!("hotkey listener failed: {e}")),
+            }
+        }
+    };
+
+    // Wait for hotkey press
+    loop {
+        match rx.recv().await {
+            Ok(HotkeyEvent::Start) => break,
+            Ok(HotkeyEvent::Stop) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+            Err(broadcast::error::RecvError::Closed) => {
+                return PasteResult {
+                    success: false,
+                    error: Some("hotkey channel closed unexpectedly".to_string()),
+                }
+            }
+        }
+    }
+
+    record_and_transcribe(api_key).await
+}
+
+/// Button-driven pipeline: starts recording immediately without waiting for hotkey.
+/// Call `stop_recording` to end the recording.
+#[tauri::command]
+async fn start_pipeline() -> PasteResult {
+    let api_key = match std::env::var("VITE_GROQ") {
+        Ok(k) => k,
+        Err(_) => {
+            return PasteResult {
+                success: false,
+                error: Some("VITE_GROQ not set in environment".to_string()),
+            }
+        }
+    };
+    record_and_transcribe(api_key).await
+}
+
+/// Signal an active `start_pipeline` or `run_pipeline` recording to stop.
+#[tauri::command]
+fn stop_recording() {
+    get_stop_notify().notify_waiters();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -272,7 +317,13 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, run_pipeline, request_accessibility_permission])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            run_pipeline,
+            start_pipeline,
+            stop_recording,
+            request_accessibility_permission
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
