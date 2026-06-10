@@ -31,17 +31,21 @@ Do not switch to: Vue, Svelte, plain JS
 
 ---
 
-## Transcription: OpenAI Whisper API
+## Transcription: Groq Whisper API
 
-Decision: Use OpenAI Whisper API as the default transcription backend.
+Decision: Use Groq's OpenAI-compatible API as the default transcription backend (switched from OpenAI Whisper API).
 
 Reason:
+- OpenAI-compatible API — minimal code changes from prior OpenAI Whisper integration
+- Faster inference than OpenAI Whisper API
+- `whisper-large-v3-turbo` model optimized for low-latency, near real-time transcription
 - High accuracy across languages including Thai
 - No local model setup required
 - Easy to swap for local whisper.cpp if needed
 
-API endpoint: `https://api.openai.com/v1/audio/transcriptions`
-Model: `whisper-1`
+API base: `https://api.groq.com/openai/v1`
+Endpoint: `https://api.groq.com/openai/v1/audio/transcriptions`
+Model: `whisper-large-v3-turbo`
 
 Alternative (future): whisper.cpp local model — document in DECISIONS.md when switching.
 
