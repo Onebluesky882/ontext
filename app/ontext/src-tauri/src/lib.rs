@@ -288,6 +288,7 @@ pub fn run() {
             TrayIconBuilder::new()
                 .icon(icon)
                 .menu(&menu)
+                .show_menu_on_left_click(false)
                 .tooltip("ontext")
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "quit" => app.exit(0),
