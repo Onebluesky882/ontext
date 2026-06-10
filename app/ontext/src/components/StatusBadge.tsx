@@ -6,7 +6,7 @@ interface Props {
 
 const labels: Record<PipelineStatus, string> = {
   idle: 'Ready',
-  running: 'Listening…',
+  running: 'Listening',
   done: 'Done',
   error: 'Error',
 }
@@ -14,7 +14,13 @@ const labels: Record<PipelineStatus, string> = {
 export function StatusBadge({ status }: Props) {
   return (
     <div className={`status-badge status-badge--${status}`}>
-      <span className="status-badge__dot" />
+      {status === 'running' ? (
+        <span className="status-badge__waveform" aria-hidden>
+          <span /><span /><span /><span /><span />
+        </span>
+      ) : (
+        <span className="status-badge__dot" />
+      )}
       <span className="status-badge__label">{labels[status]}</span>
     </div>
   )
