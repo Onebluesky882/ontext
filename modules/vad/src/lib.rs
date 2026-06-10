@@ -26,7 +26,7 @@ impl Default for StreamingVad {
 impl StreamingVad {
     pub fn new() -> Self {
         Self {
-            threshold: 0.01,
+            threshold: 0.02,
             silence_ms: 1200,
             sample_rate: 16000,
             max_chunk_ms: 8000,

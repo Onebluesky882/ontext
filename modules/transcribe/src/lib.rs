@@ -10,6 +10,12 @@ use thiserror::Error;
 pub struct TranscriptResult {
     pub text: String,
     pub language: String,
+    /// Average probability (0.0-1.0) across segments that the audio contains no speech.
+    /// High values (e.g. > 0.5) indicate the transcript is likely a hallucination.
+    pub no_speech_prob: f32,
+    /// Average log-probability across segments. Closer to 0 is more confident,
+    /// very negative values (e.g. < -1.0) indicate low-confidence/hallucinated text.
+    pub avg_logprob: f32,
 }
 
 #[derive(Debug, Error)]
@@ -25,9 +31,19 @@ pub enum TranscribeError {
 }
 
 #[derive(Deserialize)]
+struct WhisperSegment {
+    #[serde(default)]
+    avg_logprob: f32,
+    #[serde(default)]
+    no_speech_prob: f32,
+}
+
+#[derive(Deserialize)]
 struct WhisperVerboseResponse {
     text: String,
     language: String,
+    #[serde(default)]
+    segments: Vec<WhisperSegment>,
 }
 
 pub async fn transcribe(
@@ -66,7 +82,8 @@ async fn transcribe_impl(
     let form = multipart::Form::new()
         .part("file", file_part)
         .text("model", model.to_string())
-        .text("response_format", "verbose_json");
+        .text("response_format", "verbose_json")
+        .text("language", "th");
 
     let url = format!("{}/v1/audio/transcriptions", base_url);
 
@@ -95,9 +112,20 @@ async fn transcribe_impl(
         .await
         .map_err(TranscribeError::HttpError)?;
 
+    let (no_speech_prob, avg_logprob) = if whisper_response.segments.is_empty() {
+        (0.0, 0.0)
+    } else {
+        let count = whisper_response.segments.len() as f32;
+        let no_speech_sum: f32 = whisper_response.segments.iter().map(|s| s.no_speech_prob).sum();
+        let logprob_sum: f32 = whisper_response.segments.iter().map(|s| s.avg_logprob).sum();
+        (no_speech_sum / count, logprob_sum / count)
+    };
+
     Ok(TranscriptResult {
         text: whisper_response.text.trim().to_string(),
         language: whisper_response.language,
+        no_speech_prob,
+        avg_logprob,
     })
 }
 

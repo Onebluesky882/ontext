@@ -1,6 +1,6 @@
 use ontext_audio::AudioCapture;
 use ontext_clipboard::{paste, PasteResult};
-use ontext_transcribe::transcribe;
+use ontext_transcribe::{transcribe, TranscriptResult as TranscribeResult};
 use ontext_vad::{AudioChunk, StreamingVad};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::Notify;
@@ -198,6 +198,10 @@ async fn record_and_transcribe(api_key: String) -> PasteResult {
     })
 }
 
+/// Probability threshold above which a transcript is treated as a hallucination
+/// on near-silent/noise audio rather than real speech.
+const NO_SPEECH_PROB_THRESHOLD: f32 = 0.5;
+
 async fn transcribe_samples(samples: &[f32], api_key: &str) -> Result<String, String> {
     let end_ms = (samples.len() as f64 / 16000.0 * 1000.0) as u64;
     let chunk = AudioChunk {
@@ -205,10 +209,21 @@ async fn transcribe_samples(samples: &[f32], api_key: &str) -> Result<String, St
         start_ms: 0,
         end_ms,
     };
-    transcribe(vec![chunk], api_key)
+    let result: TranscribeResult = transcribe(vec![chunk], api_key)
         .await
-        .map(|r| r.text)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    eprintln!(
+        "[ontext] confidence: no_speech_prob={:.3} avg_logprob={:.3} text={:?}",
+        result.no_speech_prob, result.avg_logprob, result.text
+    );
+
+    if result.no_speech_prob > NO_SPEECH_PROB_THRESHOLD {
+        eprintln!("[ontext] discarding likely hallucination (no_speech_prob > {NO_SPEECH_PROB_THRESHOLD})");
+        return Ok(String::new());
+    }
+
+    Ok(result.text)
 }
 
 fn rms_of(samples: &[f32]) -> f32 {
