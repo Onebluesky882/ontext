@@ -257,10 +257,9 @@ pub fn run() {
                 Manager,
             };
 
-            let show_item = MenuItemBuilder::new("Show / Hide").id("toggle").build(app)?;
             let quit_item = MenuItemBuilder::new("Quit").id("quit").build(app)?;
             let menu = MenuBuilder::new(app)
-                .items(&[&show_item, &quit_item])
+                .items(&[&quit_item])
                 .build()?;
 
             let icon = Image::from_path(
@@ -276,7 +275,6 @@ pub fn run() {
                 .menu(&menu)
                 .tooltip("ontext")
                 .on_menu_event(|app, event| match event.id().as_ref() {
-                    "toggle" => toggle_window(app),
                     "quit" => app.exit(0),
                     _ => {}
                 })
@@ -312,18 +310,6 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-fn toggle_window(app: &tauri::AppHandle) {
-    use tauri::Manager;
-    if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
-        } else {
-            let _ = window.show();
-            let _ = window.set_focus();
-        }
-    }
 }
 
 fn show_window(app: &tauri::AppHandle) {
