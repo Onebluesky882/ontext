@@ -40,6 +40,12 @@ type FocusManager interface {
 	Activate(bundleID string) error
 }
 
+// Clearer is an optional capability of Writer: it clears the focused
+// field's existing content before the first paste of a session.
+type Clearer interface {
+	Clear(ctx context.Context) error
+}
+
 // Pipeline runs one recording session: capture -> VAD -> transcribe -> paste.
 type Pipeline struct {
 	Capturer    audio.Capturer
@@ -47,6 +53,11 @@ type Pipeline struct {
 	Transcriber transcribe.Transcriber
 	Writer      clipboard.Writer
 	Focus       FocusManager
+
+	// ClearBeforePaste clears the focused field's existing content before
+	// the first paste of a session, if Writer implements Clearer. Intended
+	// for debug/testing flows so each session starts from an empty field.
+	ClearBeforePaste bool
 
 	OnStatus func(Status)
 
@@ -85,6 +96,7 @@ func (p *Pipeline) Start(ctx context.Context) Result {
 	segments := p.Detector.Detect(ctx, frames)
 
 	var textBuilder strings.Builder
+	cleared := false
 	for segment := range segments {
 		res, err := p.Transcriber.Transcribe(ctx, segment)
 		if err != nil {
@@ -100,6 +112,15 @@ func (p *Pipeline) Start(ctx context.Context) Result {
 			if bundleID := p.Focus.LastFocusedApp(); bundleID != "" {
 				_ = p.Focus.Activate(bundleID)
 			}
+		}
+		if !cleared && p.ClearBeforePaste {
+			if clearer, ok := p.Writer.(Clearer); ok {
+				if err := clearer.Clear(ctx); err != nil {
+					p.setStatus(StatusError)
+					return Result{Error: fmt.Errorf("clear: %w", err)}
+				}
+			}
+			cleared = true
 		}
 		if err := p.Writer.Paste(ctx, res.Text); err != nil {
 			p.setStatus(StatusError)

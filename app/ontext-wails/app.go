@@ -52,11 +52,12 @@ func NewApp() *App {
 	return &App{
 		focus: focusManager,
 		pipeline: &pipeline.Pipeline{
-			Capturer:    audio.NewMalgoCapturer(),
-			Detector:    vad.NewRMSDetector(),
-			Transcriber: transcriber,
-			Writer:      clipboard.NewWriter(),
-			Focus:       focusManager,
+			Capturer:         audio.NewMalgoCapturer(),
+			Detector:         vad.NewRMSDetector(),
+			Transcriber:      transcriber,
+			Writer:           clipboard.NewWriter(),
+			Focus:            focusManager,
+			ClearBeforePaste: os.Getenv("ONTEXT_DEBUG_CLEAR") != "",
 		},
 	}
 }
