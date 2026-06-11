@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"time"
 
 	"ontext-wails/internal/vad"
@@ -15,7 +16,7 @@ import (
 
 const (
 	defaultBaseURL = "https://api.groq.com/openai"
-	defaultModel   = "whisper-large-v3"
+	defaultModel   = "whisper-large-v3-turbo"
 	defaultTimeout = 30 * time.Second
 )
 
@@ -108,7 +109,7 @@ func (g *GroqTranscriber) Transcribe(ctx context.Context, segment vad.Segment) (
 	}
 
 	result := Result{
-		Text:     parsed.Text,
+		Text:     strings.TrimSpace(parsed.Text),
 		Language: parsed.Language,
 	}
 	if len(parsed.Segments) > 0 {
