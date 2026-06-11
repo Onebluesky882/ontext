@@ -3,10 +3,13 @@ package clipboard
 import (
 	"context"
 	"fmt"
+	"log"
 	"runtime"
 
 	"github.com/atotto/clipboard"
 	"github.com/go-vgo/robotgo"
+
+	"ontext-wails/internal/focus"
 )
 
 // ClipboardWriter writes text to the system clipboard and simulates a paste
@@ -57,6 +60,7 @@ func simulatePaste() error {
 func simulateClear() error {
 	switch runtime.GOOS {
 	case "darwin":
+		log.Printf("[clear] accessibility trusted: %v", focus.IsAccessibilityTrusted())
 		var err error
 		runOnMainThread(func() {
 			if e := robotgo.KeyTap("a", "command"); e != nil {
