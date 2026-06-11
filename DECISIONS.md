@@ -5,13 +5,15 @@ These decisions are authoritative. Do not switch technologies without updating t
 
 ---
 
-## Runtime: Tauri 2 (SUPERSEDED — see ADR 009)
+## Runtime: Tauri 2 (REMOVED — see ADR 009)
 
 Decision: Use Tauri 2 as the application runtime.
 
 Status: Superseded 2026-06-11 by [ADR 009](docs/adrs/009-migrate-tauri-rust-to-wails-go.md).
-The runtime is being migrated to Wails (Go backend). This entry is kept for
-historical context until the migration completes.
+The runtime has been migrated to Wails (Go backend) as of stage 12's
+cutover — `app/ontext/src-tauri`, `app/ontext/` Tauri frontend, the root
+`Cargo.toml` workspace, and Rust `modules/*` crates have all been removed.
+This entry is kept for historical context only.
 
 Reason (original):
 - Cross-platform: macOS, Windows, iOS, Android
@@ -135,11 +137,11 @@ Do not switch to: npm, yarn, bun
 
 ---
 
-## Rust Edition: 2021 (SUPERSEDED — see ADR 009)
+## Rust Edition: 2021 (REMOVED — see ADR 009)
 
-Status: Superseded 2026-06-11. Backend is migrating to Go; this entry is kept
-for historical context until `Cargo.toml` workspace and `modules/*` Rust
-crates are removed.
+Status: Superseded 2026-06-11. The `Cargo.toml` workspace and `modules/*`
+Rust crates were removed in stage 12's cutover. This entry is kept for
+historical context only.
 
 ---
 
@@ -203,6 +205,33 @@ Reason:
 - `persist` middleware handles localStorage rehydration
 
 Do not switch to: Redux, Jotai
+
+---
+
+## Hotkey Reintroduction (Stage 13, Go)
+
+Decision: reintroduce a global hotkey for the Wails app, implemented with
+`golang.design/x/hotkey` (replaces the dropped `rdev`-based
+`modules/hotkey`).
+
+Reason for the original removal: `rdev`'s global listener crashed on macOS
+when Accessibility permission was not granted, so hotkey-driven start/stop
+was replaced with button-driven start/stop in the UI.
+
+Reason for reversal:
+- ADR 010 (usage-based STT billing) defines a usage session as one hotkey
+  hold: `startedAt` on hotkey-down, `endedAt` on hotkey-up,
+  `durationMs = endedAt - startedAt` reported to `POST /usage/events`. A
+  hold-to-talk hotkey is the natural UX for this and is cheaper/faster than
+  requiring two clicks (Start/Stop) per session.
+- `golang.design/x/hotkey` registers a global shortcut via OS APIs without
+  requiring the same broad input-monitoring/Accessibility grant that
+  `rdev`'s low-level event tap needed; if registration fails or
+  Accessibility permission is missing, it returns an error instead of
+  crashing, so `internal/hotkey` can fall back to button-only start/stop with
+  a status message (per Stage 13 acceptance criteria).
+- The button-driven Start/Stop UI from the Wails migration remains as the
+  fallback path — this is additive, not a regression.
 
 ---
 

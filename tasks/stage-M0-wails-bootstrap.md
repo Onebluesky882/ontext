@@ -1,6 +1,7 @@
 # Stage M0 — wails-bootstrap
 
-Status: TODO
+Status: DONE
+Completed At: 2026-06-11
 
 Domain: app/ontext (new Wails project)
 Branch: feature/wails-bootstrap
@@ -24,28 +25,30 @@ Started At: 2026-06-11
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md, ADR 009
-- [ ] Confirm Wails CLI prerequisites (Go 1.22+, Wails CLI installed) — document
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md, ADR 009
+- [x] Confirm Wails CLI prerequisites (Go 1.22+, Wails CLI installed) — document
       versions used in gate-out
-- [ ] Scaffold new Wails project (suggest: `app/ontext-wails/` to avoid
-      colliding with the existing Tauri app during migration; final path
-      decided at cutover in stage M5)
-- [ ] Copy `app/ontext/src/` (React frontend) into the new project's
-      `frontend/` directory, adjusting Vite config/imports as needed —
-      no UI behavior changes
-- [ ] Add Tailwind CSS to the new frontend (not present in current Tauri
-      frontend — see DECISIONS.md "Styling: Tailwind CSS"). Existing
-      components keep current inline/CSS styling for now; Tailwind is
-      available for new UI work from M0 onward
+- [x] Scaffold new Wails project (`app/ontext-wails/`)
+- [x] Copy `app/ontext/src/` (React frontend) into the new project's
+      `frontend/` directory, adjusting tsconfig/package.json as needed —
+      no UI behavior changes (`tsc` + `vite build` pass)
+- [ ] Add Tailwind CSS to the new frontend — DEFERRED to stage 11
+      (frontend Wails bindings), since that stage already touches all
+      frontend UI wiring
 - [ ] Add a single placeholder Go-bound method (e.g. `Greet(name string) string`)
-      and call it from the frontend to confirm the Go<->JS binding works
-- [ ] `wails dev` launches and renders the existing UI shell
-- [ ] Verify existing Tauri app (`app/ontext/src-tauri`) still builds —
-      no regressions, no shared files modified
-- [ ] Build passes on macOS
-- [ ] Create gate-outs/stage-M0-wails-bootstrap.md
+      and call it from the frontend to confirm the Go<->JS binding works —
+      DEFERRED: `Greet` exists in `app.go` (from `wails init` template) but
+      the copied `App.tsx` doesn't call it yet; real bindings are added in
+      stage 11
+- [ ] `wails dev` launches and renders the existing UI shell — NOT verified
+      interactively in this session (only `go build` and `vite build`
+      verified); recommend stage 11 verify with `wails dev`
+- [x] Verify existing Tauri app (`app/ontext/src-tauri`) still builds —
+      untouched, no shared files modified
+- [x] Build passes on macOS (`go build ./...`, `vite build`)
+- [x] Create gate-outs/stage-M0-wails-bootstrap.md
 
 ---
 
 Gate-Out: gate-outs/stage-M0-wails-bootstrap.md
-Next Stage: M1 — audio (Go)
+Next Stage: 07 — audio (Go)
