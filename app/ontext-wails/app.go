@@ -38,7 +38,7 @@ func NewApp() *App {
 			Capturer:    audio.NoopCapturer{},
 			Detector:    vad.NoopDetector{},
 			Transcriber: transcriber,
-			Writer:      clipboard.NoopWriter{},
+			Writer:      clipboard.NewWriter(),
 		},
 	}
 }
