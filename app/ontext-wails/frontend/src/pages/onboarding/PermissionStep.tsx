@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
-import { openUrl } from '@tauri-apps/plugin-opener'
+import { RequestAccessibilityPermission } from '../../../wailsjs/go/main/App'
+import { BrowserOpenURL } from '../../../wailsjs/runtime/runtime'
 
 interface Props {
   onDone: () => void
@@ -22,13 +22,9 @@ export function PermissionStep({ onDone, onBack }: Props) {
 
   const openSettings = async () => {
     try {
-      await invoke('request_accessibility_permission')
+      await RequestAccessibilityPermission()
     } catch {
-      try {
-        await openUrl('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
-      } catch {
-        // show manual path hint below
-      }
+      BrowserOpenURL('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
     }
     setOpened(true)
   }

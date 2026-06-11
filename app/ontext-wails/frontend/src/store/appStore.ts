@@ -8,6 +8,7 @@ interface AppState {
   lastText: string | null
   errorMessage: string | null
   setRunning: () => void
+  setStatus: (status: PipelineStatus) => void
   setDone: (result: PasteResult, text?: string) => void
   reset: () => void
 }
@@ -18,6 +19,8 @@ export const useAppStore = create<AppState>((set) => ({
   errorMessage: null,
 
   setRunning: () => set({ status: 'running', errorMessage: null }),
+
+  setStatus: (status) => set({ status }),
 
   setDone: (result, text) =>
     set({

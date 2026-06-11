@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 interface Props {
   page: 'main' | 'settings'
   onNavigate: (page: 'main' | 'settings') => void
@@ -5,7 +7,7 @@ interface Props {
 
 export function NavBar({ page, onNavigate }: Props) {
   return (
-    <nav className="navbar" data-tauri-drag-region>
+    <nav className="navbar" style={{ '--wails-draggable': 'drag' } as CSSProperties}>
       <span className="navbar__title">ontext</span>
       <button
         className={`navbar__icon-btn ${page === 'settings' ? 'navbar__icon-btn--active' : ''}`}

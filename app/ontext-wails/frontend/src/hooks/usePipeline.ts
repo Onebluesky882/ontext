@@ -1,15 +1,21 @@
-import { invoke } from '@tauri-apps/api/core'
-import type { PasteResult } from '../types/transcript'
-import { useAppStore } from '../store/appStore'
+import { useEffect } from 'react'
+import { StartPipeline, StopRecording } from '../../wailsjs/go/main/App'
+import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime'
+import { useAppStore, type PipelineStatus } from '../store/appStore'
 
 export function usePipeline() {
-  const { status, setRunning, setDone, reset } = useAppStore()
+  const { status, setRunning, setStatus, setDone, reset } = useAppStore()
+
+  useEffect(() => {
+    EventsOn('status', (status: PipelineStatus) => setStatus(status))
+    return () => EventsOff('status')
+  }, [setStatus])
 
   const start = async () => {
     if (status === 'running') return
     setRunning()
     try {
-      const result = await invoke<PasteResult>('start_pipeline')
+      const result = await StartPipeline()
       setDone(result)
     } catch (err) {
       setDone({ success: false, error: String(err) })
@@ -19,7 +25,7 @@ export function usePipeline() {
   const stop = async () => {
     if (status !== 'running') return
     try {
-      await invoke('stop_recording')
+      await StopRecording()
     } catch {
       // ignore — the pipeline will surface any error through start()'s setDone
     }
