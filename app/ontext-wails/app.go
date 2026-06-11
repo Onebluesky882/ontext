@@ -35,7 +35,7 @@ func NewApp() *App {
 
 	return &App{
 		pipeline: &pipeline.Pipeline{
-			Capturer:    audio.NoopCapturer{},
+			Capturer:    audio.NewMalgoCapturer(),
 			Detector:    vad.NoopDetector{},
 			Transcriber: transcriber,
 			Writer:      clipboard.NoopWriter{},
