@@ -38,7 +38,7 @@ func NewApp() *App {
 			Capturer:    audio.NewMalgoCapturer(),
 			Detector:    vad.NewRMSDetector(),
 			Transcriber: transcriber,
-			Writer:      clipboard.NoopWriter{},
+			Writer:      clipboard.NewWriter(),
 		},
 	}
 }
