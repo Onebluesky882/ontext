@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"ontext-wails/internal/audio"
@@ -32,12 +33,20 @@ type Result struct {
 	Error error
 }
 
+// FocusManager reactivates the application the user was focused on before
+// recording started, so each pasted segment lands in the right window.
+type FocusManager interface {
+	LastFocusedApp() string
+	Activate(bundleID string) error
+}
+
 // Pipeline runs one recording session: capture -> VAD -> transcribe -> paste.
 type Pipeline struct {
 	Capturer    audio.Capturer
 	Detector    vad.Detector
 	Transcriber transcribe.Transcriber
 	Writer      clipboard.Writer
+	Focus       FocusManager
 
 	OnStatus func(Status)
 
@@ -75,25 +84,31 @@ func (p *Pipeline) Start(ctx context.Context) Result {
 
 	segments := p.Detector.Detect(ctx, frames)
 
-	var text string
+	var textBuilder strings.Builder
 	for segment := range segments {
 		res, err := p.Transcriber.Transcribe(ctx, segment)
 		if err != nil {
 			p.setStatus(StatusError)
 			return Result{Error: fmt.Errorf("transcribe: %w", err)}
 		}
-		text += res.Text
-	}
+		if res.Text == "" || res.IsLikelyHallucination() {
+			continue
+		}
+		textBuilder.WriteString(res.Text)
 
-	if text != "" {
-		if err := p.Writer.Paste(ctx, text); err != nil {
+		if p.Focus != nil {
+			if bundleID := p.Focus.LastFocusedApp(); bundleID != "" {
+				_ = p.Focus.Activate(bundleID)
+			}
+		}
+		if err := p.Writer.Paste(ctx, res.Text); err != nil {
 			p.setStatus(StatusError)
 			return Result{Error: fmt.Errorf("paste: %w", err)}
 		}
 	}
 
 	p.setStatus(StatusDone)
-	return Result{Text: text}
+	return Result{Text: textBuilder.String()}
 }
 
 // Stop ends the current recording session, if one is running.

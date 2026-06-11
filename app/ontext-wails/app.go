@@ -11,6 +11,7 @@ import (
 
 	"ontext-wails/internal/audio"
 	"ontext-wails/internal/clipboard"
+	"ontext-wails/internal/focus"
 	"ontext-wails/internal/httpapi"
 	"ontext-wails/internal/pipeline"
 	"ontext-wails/internal/transcribe"
@@ -31,6 +32,7 @@ type PasteResult struct {
 type App struct {
 	ctx      context.Context
 	pipeline *pipeline.Pipeline
+	focus    *focus.Manager
 }
 
 // NewApp creates a new App application struct
@@ -42,12 +44,16 @@ func NewApp() *App {
 		transcriber = transcribe.NewGroqTranscriber(apiKey)
 	}
 
+	focusManager := focus.New()
+
 	return &App{
+		focus: focusManager,
 		pipeline: &pipeline.Pipeline{
 			Capturer:    audio.NewMalgoCapturer(),
 			Detector:    vad.NewRMSDetector(),
 			Transcriber: transcriber,
 			Writer:      clipboard.NewWriter(),
+			Focus:       focusManager,
 		},
 	}
 }
@@ -61,8 +67,15 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(a.ctx, "status", string(status))
 	}
 
+	a.focus.Start()
+
 	server := httpapi.New(a.pipeline)
 	go server.Listen(debugAPIAddr)
+}
+
+// shutdown is called when the app is closing.
+func (a *App) shutdown(_ context.Context) {
+	a.focus.Stop()
 }
 
 // Greet returns a greeting for the given name
@@ -85,10 +98,14 @@ func (a *App) StopRecording() error {
 	return a.pipeline.Stop()
 }
 
-// RequestAccessibilityPermission requests macOS Accessibility permission.
-// Native implementation lands in stage 12 (focus-paste); until then this
-// always returns an error so the frontend falls back to opening System
-// Settings directly.
+// RequestAccessibilityPermission checks whether ontext has macOS
+// Accessibility permission and, if not, prompts the user to grant it. It
+// returns an error if permission is not yet granted, so the frontend can
+// fall back to opening System Settings directly.
 func (a *App) RequestAccessibilityPermission() error {
-	return errors.New("not implemented")
+	if focus.IsAccessibilityTrusted() {
+		return nil
+	}
+	focus.RequestAccessibilityPermission()
+	return errors.New("accessibility permission not granted")
 }

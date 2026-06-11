@@ -3,93 +3,107 @@
 ## Overview
 
 ontext uses a pipeline architecture.
-Each module is a discrete Rust crate under `modules/`.
+Each module is a discrete Go package under `app/ontext-wails/internal/`.
 Modules communicate through defined contracts (see CONTRACTS.md).
-The Tauri backend orchestrates the pipeline.
+The Wails Go backend (`app.go` + `internal/pipeline`) orchestrates the pipeline.
 The React frontend handles UI state only.
 
 ## System Diagram
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                  Tauri Backend (Rust)            │
+│              Wails Backend (Go)                  │
 │                                                  │
-│  ┌──────────┐    ┌──────────┐    ┌───────────┐  │
-│  │  hotkey  │───▶│  audio   │───▶│    vad    │  │
-│  └──────────┘    └──────────┘    └─────┬─────┘  │
-│                                        │         │
-│                               ┌────────▼──────┐  │
-│                               │  transcribe   │  │
-│                               └────────┬──────┘  │
-│                                        │         │
-│                               ┌────────▼──────┐  │
-│                               │  clipboard    │  │
-│                               └───────────────┘  │
+│  ┌──────────┐    ┌───────────┐                  │
+│  │  audio   │───▶│    vad    │                  │
+│  └──────────┘    └─────┬─────┘                  │
+│                        │                         │
+│               ┌────────▼──────┐                  │
+│               │  transcribe   │                  │
+│               └────────┬──────┘                  │
+│                        │                         │
+│               ┌────────▼──────┐    ┌──────────┐  │
+│               │  clipboard    │◀───│  focus   │  │
+│               └───────────────┘    └──────────┘  │
 └─────────────────────────────────────────────────┘
          ▲                              │
-         │ Tauri IPC (invoke/event)     │
+         │ Wails bindings/events        │
          ▼                              ▼
 ┌─────────────────────┐     ┌──────────────────────┐
 │  React Frontend     │     │  Active App (paste)  │
-│  (UI / status only) │     │  (macOS/Win/iOS/And) │
+│  (UI / status only) │     │  (macOS/Windows)     │
 └─────────────────────┘     └──────────────────────┘
 ```
 
 ## Module Responsibilities
 
-### modules/hotkey
-- Listen for global hotkey (default: `Ctrl+Shift+Space` / `Cmd+Shift+Space`)
-- Emit `hotkey:start` event on press
-- Emit `hotkey:stop` event on release
-- Plugin: `tauri-plugin-global-shortcut`
-
-### modules/audio
-- Open microphone on `hotkey:start`
+### internal/audio
+- Open microphone on `StartPipeline`
 - Stream PCM audio (16kHz, mono, f32)
-- Stop on `hotkey:stop`
-- Output: `AudioBuffer { samples: Vec<f32>, sample_rate: u32 }`
+- Stop on `StopRecording`
+- Output: `audio.Frame { Samples []float32, SampleRate int }`
+- Library: `gen2brain/malgo`
 
-### modules/vad
-- Input: `AudioBuffer`
+### internal/vad
+- Input: `<-chan audio.Frame`
 - Detect speech segments, discard silence
-- Output: `Vec<AudioChunk>` (non-silent segments only)
-- Library: `webrtc-vad` or `silero-vad`
+- Output: `<-chan vad.Segment` (non-silent segments only)
+- Streaming RMS-VAD (ported from Rust, no external dependency)
 
-### modules/transcribe
-- Input: `Vec<AudioChunk>`
-- Send to Whisper API (or local model)
-- Output: `TranscriptResult { text: String, language: String }`
+### internal/transcribe
+- Input: `vad.Segment`
+- Send to Groq Whisper API
+- Output: `transcribe.Result { Text, Language, NoSpeechProb, AvgLogprob, CompressionRatio }`
+- Filters likely hallucinations via `Result.IsLikelyHallucination()`
 
-### modules/clipboard
-- Input: `TranscriptResult`
-- Write `text` to system clipboard
-- Simulate paste (`Cmd+V` / `Ctrl+V`) into active window
-- Output: `PasteResult { success: bool }`
+### internal/focus
+- Tracks the frontmost application (excluding ontext itself) via cgo +
+  AppKit/CoreFoundation (macOS only; no-op on other platforms)
+- Reactivates that app before each paste, with a settle delay
+  (`focus.SettleDelay`)
+- Exposes Accessibility-permission check/prompt
+  (`AXIsProcessTrusted` / `AXIsProcessTrustedWithOptions`)
+
+### internal/clipboard
+- Input: text (string) from `transcribe.Result`
+- Write `text` to system clipboard (`atotto/clipboard`)
+- Simulate paste (`Cmd+V` / `Ctrl+V`) into active window (`go-vgo/robotgo`)
+- Output: `error` (nil on success)
+
+### internal/pipeline
+- Wires audio -> vad -> transcribe -> focus -> clipboard together
+- Each transcribed segment is pasted immediately (real-time, not buffered
+  until Stop)
+- Emits `Status` (idle/running/done/error) via `OnStatus` callback, wired to
+  `runtime.EventsEmit` in `app.go`
 
 ## Frontend (React)
 
 - Shows recording status (idle / recording / transcribing)
 - Shows last transcript
-- Settings: hotkey config, Whisper API key, language
+- Settings: Whisper API key, language
 - Does NOT implement any pipeline logic
+- Calls bound Go methods (`App.StartPipeline`, `App.StopRecording`,
+  `App.RequestAccessibilityPermission`) and subscribes to `status` events via
+  `wailsjs/runtime` `EventsOn`
 
 ## Platform Notes
 
-| Platform | Hotkey API              | Audio API      | Paste API         |
-|----------|-------------------------|----------------|-------------------|
-| macOS    | CGEventTap / tauri      | CoreAudio      | CGEvent           |
-| Windows  | RegisterHotKey / tauri  | WASAPI         | SendInput         |
-| iOS      | Long press button       | AVAudioEngine  | UIPasteboard      |
-| Android  | Floating button         | AudioRecord    | ClipboardManager  |
+| Platform | Audio API | Paste API        | Focus tracking            |
+|----------|-----------|-------------------|----------------------------|
+| macOS    | CoreAudio (malgo) | CGEvent (robotgo) | cgo + AppKit/CoreFoundation |
+| Windows  | WASAPI (malgo)    | SendInput (robotgo) | no-op (not needed)        |
 
 ## Data Flow (Sequence)
 
 ```
-1. User holds hotkey
-2. hotkey::listen() → emits HotkeyEvent::Start
-3. audio::start_capture() → streams AudioBuffer
-4. vad::process(buffer) → returns Vec<AudioChunk>
-5. transcribe::run(chunks) → returns TranscriptResult
-6. clipboard::paste(result.text) → pastes into active app
-7. Frontend receives status updates via Tauri events
+1. User clicks Start → App.StartPipeline()
+2. audio.Capturer.Start() → streams audio.Frame on a channel
+3. vad.Detector.Detect(frames) → streams vad.Segment on a channel
+4. For each segment:
+   a. transcribe.Transcriber.Transcribe(segment) → transcribe.Result
+   b. if not empty/hallucination: focus.Manager.Activate(lastFocusedApp)
+   c. clipboard.Writer.Paste(result.Text) → pastes into active app
+5. Pipeline emits Status via OnStatus → runtime.EventsEmit("status", ...)
+6. User clicks Stop → App.StopRecording() cancels the session
 ```

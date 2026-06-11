@@ -6,106 +6,103 @@ Do not change contracts without orchestrator approval.
 
 ---
 
-## HotkeyEvent
+## audio.Frame
 
-```rust
-pub enum HotkeyEvent {
-    Start,
-    Stop,
+```go
+type Frame struct {
+    Samples    []float32
+    SampleRate int // always 16000
 }
 ```
 
 ---
 
-## AudioBuffer
+## vad.Segment
 
-```rust
-pub struct AudioBuffer {
-    pub samples: Vec<f32>,
-    pub sample_rate: u32,  // always 16000
+```go
+type Segment struct {
+    Samples    []float32
+    SampleRate int
 }
 ```
 
 ---
 
-## AudioChunk
+## transcribe.Result
 
-```rust
-pub struct AudioChunk {
-    pub samples: Vec<f32>,
-    pub start_ms: u64,
-    pub end_ms: u64,
+```go
+type Result struct {
+    Text             string
+    Language         string
+    NoSpeechProb     float32
+    AvgLogprob       float32
+    CompressionRatio float32
 }
 ```
 
 ---
 
-## TranscriptResult
+## clipboard.Writer
 
-```rust
-pub struct TranscriptResult {
-    pub text: String,
-    pub language: String,
+```go
+type Writer interface {
+    Paste(ctx context.Context, text string) error
 }
 ```
 
----
-
-## PasteResult
-
-```rust
-pub struct PasteResult {
-    pub success: bool,
-    pub error: Option<String>,
-}
-```
+`Paste` returns `nil` on success, never panics. On failure it returns a
+descriptive error (`fmt.Errorf`), never an empty-string error.
 
 ---
 
 ## Pipeline Contracts
 
-| Module      | Input               | Output                  |
-|-------------|---------------------|-------------------------|
-| hotkey      | —                   | `HotkeyEvent`           |
-| audio       | `HotkeyEvent`       | `AudioBuffer`           |
-| vad         | `AudioBuffer`       | `Vec<AudioChunk>`       |
-| transcribe  | `Vec<AudioChunk>`   | `TranscriptResult`      |
-| clipboard   | `TranscriptResult`  | `PasteResult`           |
+| Module      | Input               | Output                                            |
+|-------------|---------------------|----------------------------------------------------|
+| audio       | Start/Stop signal   | `<-chan audio.Frame`                               |
+| vad         | `<-chan audio.Frame`| `<-chan vad.Segment`                               |
+| transcribe  | `vad.Segment`       | `transcribe.Result`                                |
+| focus       | —                   | last focused app bundle id; `Activate(bundleID)`   |
+| clipboard   | text (string)       | `error`                                            |
 
 ---
 
-## Serde / Tauri IPC Serialization
+## Wails Bindings (Go <-> TypeScript)
 
-All Rust structs passed through Tauri IPC must derive Serialize and Deserialize
-and use `rename_all = "camelCase"` so field names match the TypeScript types.
+`app.go` exposes bound methods called from the frontend via the generated
+`wailsjs/go/main/App` bindings:
 
-```rust
-use serde::{Deserialize, Serialize};
+- `StartPipeline() PasteResult`
+- `StopRecording() error`
+- `RequestAccessibilityPermission() error`
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AudioBuffer {
-    pub samples: Vec<f32>,
-    pub sample_rate: u32,
+```go
+type PasteResult struct {
+    Success bool   `json:"success"`
+    Error   string `json:"error,omitempty"`
 }
 ```
 
-Field name mapping (Rust → TypeScript):
+Status updates are pushed via `runtime.EventsEmit(ctx, "status", string(status))`
+and consumed in the frontend via `wailsjs/runtime` `EventsOn("status", ...)`.
 
-| Rust (snake_case) | TypeScript (camelCase) |
-|-------------------|------------------------|
-| `sample_rate`     | `sampleRate`           |
-| `start_ms`        | `startMs`              |
-| `end_ms`          | `endMs`                |
+Field name mapping (Go -> TypeScript):
 
-Do not skip `#[serde(rename_all = "camelCase")]`. Missing it will break Tauri IPC silently.
+| Go              | TypeScript      |
+|-----------------|------------------|
+| `SampleRate`    | `sampleRate`     |
+| `Success`       | `success`        |
+| `Error`         | `error`          |
 
 ---
 
 ## Rules
 
-- `sample_rate` is always `16000`. Do not change.
-- `text` in `TranscriptResult` must be trimmed (no leading/trailing whitespace).
-- `PasteResult.error` must be `None` on success, never an empty string.
-- All structs sent over Tauri IPC must use `#[serde(rename_all = "camelCase")]`.
-- If a contract appears incorrect: STOP and report. Do not invent a new contract.
+- `SampleRate` is always `16000`. Do not change.
+- `transcribe.Result.Text` must be trimmed (no leading/trailing whitespace).
+- `PasteResult.Error` must be omitted on success (`json:",omitempty"`), never
+  present as an empty string.
+- All JSON fields exposed to the frontend use `lowerCamelCase` via Go struct
+  tags (`json:"..."`).
+- If a contract appears incorrect: STOP and report. Do not invent a new
+  contract.

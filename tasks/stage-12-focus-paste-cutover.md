@@ -1,6 +1,6 @@
 # Stage 12 — focus-paste (Go) + cutover
 
-Status: TODO (blocked on stages 07-11)
+Status: DONE
 
 Domain: `app/ontext-wails` (Wails Go backend), repo root (`Cargo.toml`,
 `app/ontext/`)
@@ -15,26 +15,27 @@ by `app.go`, matching the per-segment real-time paste behavior from
 stage 6. On PASS, remove `app/ontext/src-tauri`, the `app/ontext/` Tauri
 frontend, the root `Cargo.toml` workspace, and Rust `modules/*` crates.
 
-Assigned To: (unassigned)
-Started At: (unset)
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-11
+Completed At: 2026-06-11
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 12), ADR 009, gate-outs/stage-06-focus-paste.md
-- [ ] Confirm stages 07-11 gate-outs are PASS / ready_for_next: YES
-- [ ] Implement cgo + AppKit/CoreFoundation focus capture/restore
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 12), ADR 009, gate-outs/stage-06-focus-paste.md
+- [x] Confirm stages 07-11 gate-outs are PASS / ready_for_next: YES
+- [x] Implement cgo + AppKit/CoreFoundation focus capture/restore
       (frontmost app tracking, reactivate before paste, settle delay),
       behind macOS build tags; non-macOS builds unaffected
-- [ ] Wire `audio` (07), `vad` (08), `transcribe` (09), `clipboard` (10)
-      adapters into `pipeline.Pipeline` in `app.go` (replacing remaining
-      no-ops)
-- [ ] Each transcribed segment pasted immediately (no buffering until Stop)
-- [ ] Unit tests pass; build passes on macOS and Windows
-- [ ] Remove `app/ontext/src-tauri/`, `app/ontext/` Tauri frontend
+- [x] Wire `audio` (07), `vad` (08), `transcribe` (09), `clipboard` (10)
+      adapters into `pipeline.Pipeline` in `app.go` (already wired prior to
+      this stage; added `focus.Manager` wiring)
+- [x] Each transcribed segment pasted immediately (no buffering until Stop)
+- [x] Unit tests pass; build passes on macOS and Windows
+- [x] Remove `app/ontext/src-tauri/`, `app/ontext/` Tauri frontend
       remnants, root `Cargo.toml` workspace members, and Rust `modules/*`
       crates no longer needed
-- [ ] Create gate-outs/stage-12-focus-paste-cutover.md
+- [x] Create gate-outs/stage-12-focus-paste-cutover.md
 
 ---
 
