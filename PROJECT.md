@@ -12,8 +12,16 @@ Click Start in the app → speak → click Stop → text is pasted into the acti
 Note: the original design used a global hotkey (Ctrl+Space) to start/stop
 recording. The hotkey listener (rdev) caused crashes when macOS Accessibility
 permission was not granted, so it was removed in favor of a button-driven
-start/stop in the UI. Stage 13 (`internal/hotkey`, Go) is PROPOSED but not
-started — see PIPELINE.md before re-enabling it.
+start/stop in the UI.
+
+Update (2026-06-11): the global hotkey is being reintroduced as a
+hold-to-talk control — hotkey-down starts recording, hotkey-up stops it — and
+doubles as the usage-session timer for billing (ADR 010): `startedAt`/
+`endedAt` from the hold are reported to the usage-metering backend as
+`durationMs`. Stage 13 (`internal/hotkey`, Go) is READY, using
+`golang.design/x/hotkey` instead of `rdev` (see DECISIONS.md for why this
+avoids the prior Accessibility crash). The button-driven start/stop remains
+as a fallback when Accessibility permission is missing.
 
 ## Platforms
 
@@ -48,6 +56,7 @@ User clicks Start (UI button)
 | 10    | internal/clipboard                | Write text to clipboard, paste (atotto/robotgo)   |
 | 11    | frontend / app.go                 | Wails bindings, status events                     |
 | 12    | internal/focus, internal/pipeline | Focus capture/restore (cgo+AppKit), pipeline wiring |
+| 13    | internal/hotkey                   | Global hold-to-talk hotkey, usage-session timing (golang.design/x/hotkey) |
 
 ## Repository Structure
 
@@ -69,7 +78,7 @@ DECISIONS.md). Stages M0 and 07-12 are done — the old Tauri app
 (`app/ontext/`), root `Cargo.toml` workspace, and Rust `modules/*` crates
 have been removed as of stage 12's cutover.
 
-Stage 13 (hotkey, Go) is PROPOSED but not started — see PIPELINE.md.
+Stage 13 (hotkey, Go) is READY — see PIPELINE.md and ADR 010.
 
 iOS/Android were dropped from target platforms during the Wails migration
 (Wails does not support mobile) — see DECISIONS.md.

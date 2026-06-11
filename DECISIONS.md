@@ -208,6 +208,33 @@ Do not switch to: Redux, Jotai
 
 ---
 
+## Hotkey Reintroduction (Stage 13, Go)
+
+Decision: reintroduce a global hotkey for the Wails app, implemented with
+`golang.design/x/hotkey` (replaces the dropped `rdev`-based
+`modules/hotkey`).
+
+Reason for the original removal: `rdev`'s global listener crashed on macOS
+when Accessibility permission was not granted, so hotkey-driven start/stop
+was replaced with button-driven start/stop in the UI.
+
+Reason for reversal:
+- ADR 010 (usage-based STT billing) defines a usage session as one hotkey
+  hold: `startedAt` on hotkey-down, `endedAt` on hotkey-up,
+  `durationMs = endedAt - startedAt` reported to `POST /usage/events`. A
+  hold-to-talk hotkey is the natural UX for this and is cheaper/faster than
+  requiring two clicks (Start/Stop) per session.
+- `golang.design/x/hotkey` registers a global shortcut via OS APIs without
+  requiring the same broad input-monitoring/Accessibility grant that
+  `rdev`'s low-level event tap needed; if registration fails or
+  Accessibility permission is missing, it returns an error instead of
+  crashing, so `internal/hotkey` can fall back to button-only start/stop with
+  a status message (per Stage 13 acceptance criteria).
+- The button-driven Start/Stop UI from the Wails migration remains as the
+  fallback path — this is additive, not a regression.
+
+---
+
 ## Branch Strategy
 
 Decision: feature branches only. Never commit directly to `main` or `dev`.

@@ -342,29 +342,28 @@ Acceptance Criteria:
 Domain: `app/ontext-wails/internal/hotkey` (new Go package)
 Branch: `feature/stage-13-hotkey-go`
 
-Status: PROPOSED — conflicts with the existing decision recorded earlier in
-this file ("`modules/hotkey` is dropped, dead code, not ported") and with
-PROJECT.md's note that hotkey-driven recording was replaced by
-button-driven start/stop after `rdev` crashes on macOS without
-Accessibility permission. Before starting this stage:
-- Confirm with the orchestrator whether global-hotkey start/stop should be
-  reintroduced for the Wails app
-- If yes, update DECISIONS.md and PROJECT.md to reflect the reversal and
-  document the chosen Go hotkey library (e.g. `golang.design/x/hotkey`) and
-  how it avoids the prior `rdev`/Accessibility crash
-- If no, this stage is dropped — do not implement
+Status: READY — orchestrator confirmed (2026-06-11) that global-hotkey
+start/stop should be reintroduced for the Wails app, reversing the earlier
+"`modules/hotkey` is dropped, dead code, not ported" note. See DECISIONS.md
+("Hotkey Reintroduction (Stage 13, Go)") and ADR 010 (Accepted) for the
+rationale and chosen library (`golang.design/x/hotkey`, replacing `rdev`).
 
-Goal (if confirmed):
-Implement a global hotkey listener in Go that emits Start/Stop signals to
-`pipeline.Pipeline`, gracefully handling missing Accessibility permission
-on macOS (no crash — degrade to button-only start/stop).
+Goal:
+Implement a global hold-to-talk hotkey listener in Go that emits Start (on
+key-down) / Stop (on key-up) signals to `pipeline.Pipeline`, and records
+`startedAt`/`endedAt` timestamps for usage-session reporting per ADR 010.
+Gracefully handle missing Accessibility permission on macOS (no crash —
+degrade to button-only start/stop).
 
 Input: none
 
-Output: Start/Stop signal into `pipeline.Pipeline`
+Output: Start/Stop signal into `pipeline.Pipeline`, plus
+`startedAt`/`endedAt` timestamps for the usage-metering reporter (ADR 010)
 
 Acceptance Criteria:
 - Hotkey press/release starts/stops the pipeline
+- Hotkey-down/up timestamps are captured and made available for
+  `POST /usage/events` reporting (ADR 010)
 - Missing Accessibility permission does not crash the app — falls back to
   button-driven start/stop with a status message
 - Unit tests pass; build passes on macOS and Windows
