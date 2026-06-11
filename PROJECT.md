@@ -12,21 +12,19 @@ Click Start in the app → speak → click Stop → text is pasted into the acti
 Note: the original design used a global hotkey (Ctrl+Space) to start/stop
 recording. The hotkey listener (rdev) caused crashes when macOS Accessibility
 permission was not granted, so it was removed in favor of a button-driven
-start/stop in the UI. `modules/hotkey` still exists but is unused/dead code —
-see DECISIONS.md before re-enabling it.
+start/stop in the UI. Stage 13 (`internal/hotkey`, Go) is PROPOSED but not
+started — see PIPELINE.md before re-enabling it.
 
 ## Platforms
 
 - macOS
 - Windows
-- iOS
-- Android
 
 ## Tech Stack
 
-- Runtime: Tauri 2
+- Runtime: Wails v2
 - Frontend: React 19 + TypeScript + Vite
-- Backend: Rust (Tauri core)
+- Backend: Go (1.22+)
 - Transcription: Groq Whisper API (whisper-large-v3-turbo, language=th)
 
 ## Core Flow
@@ -35,35 +33,29 @@ see DECISIONS.md before re-enabling it.
 User clicks Start (UI button)
   → Audio capture starts, streams mic chunks
   → Streaming RMS-VAD detects speech segments
-  → Each segment sent to Groq Whisper for transcription
+  → Each segment sent to Groq Whisper for transcription, then pasted
+    immediately into the previously focused app (real-time, per segment)
   → User clicks Stop
-  → Combined transcript copied to clipboard
-  → Text pasted into active input (Cmd+V / Ctrl+V simulation)
 ```
 
 ## Modules
 
-| Stage | Module              | Responsibility                                    |
-|-------|---------------------|----------------------------------------------------|
-| 1     | modules/hotkey      | Global hotkey detection (unused — see note above) |
-| 2     | modules/audio       | Microphone capture, PCM buffer                    |
-| 3     | modules/vad         | Voice activity detection (streaming RMS-VAD)      |
-| 4     | modules/transcribe  | Audio → text via Groq Whisper                     |
-| 5     | modules/clipboard   | Write text to clipboard, paste                    |
+| Stage | Module                          | Responsibility                                    |
+|-------|----------------------------------|----------------------------------------------------|
+| 07    | internal/audio                   | Microphone capture, PCM buffer (malgo)            |
+| 08    | internal/vad                     | Voice activity detection (streaming RMS-VAD)      |
+| 09    | internal/transcribe               | Audio → text via Groq Whisper                     |
+| 10    | internal/clipboard                | Write text to clipboard, paste (atotto/robotgo)   |
+| 11    | frontend / app.go                 | Wails bindings, status events                     |
+| 12    | internal/focus, internal/pipeline | Focus capture/restore (cgo+AppKit), pipeline wiring |
 
 ## Repository Structure
 
 ```
 ontext/
-├── app/ontext/           # Tauri app (frontend + Rust backend)
-│   ├── src/              # React frontend
-│   └── src-tauri/        # Rust backend
-├── modules/              # Core Rust modules
-│   ├── hotkey/
-│   ├── audio/
-│   ├── vad/
-│   ├── transcribe/
-│   └── clipboard/
+├── app/ontext-wails/     # Wails app (Go backend + React frontend)
+│   ├── frontend/         # React frontend
+│   └── internal/         # Go packages: audio, vad, transcribe, clipboard, focus, pipeline
 ├── docs/                 # Additional documentation
 ├── tasks/                # Agent task assignments
 └── gate-outs/            # Stage completion reports
@@ -71,12 +63,13 @@ ontext/
 
 ## Status
 
-Stages 1-6 complete on Tauri 2 + Rust (see tasks/ and gate-outs/).
-Hotkey-driven recording (stage 1) was replaced by button-driven start/stop —
-see note in Description.
-
-**Migration in progress:** the runtime is being migrated from Tauri/Rust to
+**Migration complete:** the runtime has been migrated from Tauri/Rust to
 Wails/Go (see [ADR 009](docs/adrs/009-migrate-tauri-rust-to-wails-go.md) and
-DECISIONS.md). New stages M0-M5 in PIPELINE.md track this; M0
-(`tasks/stage-M0-wails-bootstrap.md`) is next up. The Tauri app and Rust
-modules remain in place and functional until cutover at stage M5.
+DECISIONS.md). Stages M0 and 07-12 are done — the old Tauri app
+(`app/ontext/`), root `Cargo.toml` workspace, and Rust `modules/*` crates
+have been removed as of stage 12's cutover.
+
+Stage 13 (hotkey, Go) is PROPOSED but not started — see PIPELINE.md.
+
+iOS/Android were dropped from target platforms during the Wails migration
+(Wails does not support mobile) — see DECISIONS.md.

@@ -309,6 +309,8 @@ Acceptance Criteria:
 
 ### Stage 12 — focus-paste (Go) + cutover
 
+Status: DONE — see gate-outs/stage-12-focus-paste-cutover.md
+
 Domain: `app/ontext-wails` (Wails Go backend), repo root (`Cargo.toml`,
 `app/ontext/`)
 Branch: `feature/stage-12-focus-paste-cutover`

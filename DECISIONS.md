@@ -5,13 +5,15 @@ These decisions are authoritative. Do not switch technologies without updating t
 
 ---
 
-## Runtime: Tauri 2 (SUPERSEDED — see ADR 009)
+## Runtime: Tauri 2 (REMOVED — see ADR 009)
 
 Decision: Use Tauri 2 as the application runtime.
 
 Status: Superseded 2026-06-11 by [ADR 009](docs/adrs/009-migrate-tauri-rust-to-wails-go.md).
-The runtime is being migrated to Wails (Go backend). This entry is kept for
-historical context until the migration completes.
+The runtime has been migrated to Wails (Go backend) as of stage 12's
+cutover — `app/ontext/src-tauri`, `app/ontext/` Tauri frontend, the root
+`Cargo.toml` workspace, and Rust `modules/*` crates have all been removed.
+This entry is kept for historical context only.
 
 Reason (original):
 - Cross-platform: macOS, Windows, iOS, Android
@@ -135,11 +137,11 @@ Do not switch to: npm, yarn, bun
 
 ---
 
-## Rust Edition: 2021 (SUPERSEDED — see ADR 009)
+## Rust Edition: 2021 (REMOVED — see ADR 009)
 
-Status: Superseded 2026-06-11. Backend is migrating to Go; this entry is kept
-for historical context until `Cargo.toml` workspace and `modules/*` Rust
-crates are removed.
+Status: Superseded 2026-06-11. The `Cargo.toml` workspace and `modules/*`
+Rust crates were removed in stage 12's cutover. This entry is kept for
+historical context only.
 
 ---
 
