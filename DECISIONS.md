@@ -5,15 +5,43 @@ These decisions are authoritative. Do not switch technologies without updating t
 
 ---
 
-## Runtime: Tauri 2
+## Runtime: Tauri 2 (SUPERSEDED — see ADR 009)
 
 Decision: Use Tauri 2 as the application runtime.
 
-Reason:
+Status: Superseded 2026-06-11 by [ADR 009](docs/adrs/009-migrate-tauri-rust-to-wails-go.md).
+The runtime is being migrated to Wails (Go backend). This entry is kept for
+historical context until the migration completes.
+
+Reason (original):
 - Cross-platform: macOS, Windows, iOS, Android
 - Rust backend — safe, fast, low memory
 - Smaller binary than Electron
 - Native OS integration for hotkey, audio, clipboard
+
+---
+
+## Runtime: Wails v2 + Go
+
+Decision: Use Wails v2 as the application runtime, with Go (1.22+) as the
+backend language. Replaces Tauri 2 / Rust (see ADR 009).
+
+Reason:
+- Cross-platform: macOS, Windows (iOS/Android dropped from target platforms —
+  Wails does not support mobile)
+- Embeds a system webview, same as Tauri — existing React/Vite frontend
+  reused as-is
+- Go backend — simpler concurrency model for the streaming audio/VAD/paste
+  pipeline than was achieved in Rust
+
+Go library choices for ported modules:
+- Audio capture: `github.com/gen2brain/malgo` (replaces `cpal`)
+- VAD: streaming RMS-VAD ported directly to Go (replaces `webrtc-vad` crate)
+- Transcription HTTP: stdlib `net/http` (replaces `reqwest`)
+- Clipboard write: `github.com/atotto/clipboard` (replaces `arboard`)
+- Paste simulation (Cmd+V/Ctrl+V): `github.com/go-vgo/robotgo` (replaces `enigo`)
+- macOS focus capture/AX permission: `cgo` + AppKit/CoreFoundation shims
+  (replaces `objc2`/`objc2-app-kit`/`objc2-foundation`)
 
 Do not switch to: Electron, Flutter, React Native
 
@@ -28,6 +56,24 @@ Reason:
 - Type safety reduces agent errors across stages
 
 Do not switch to: Vue, Svelte, plain JS
+
+---
+
+## Styling: Tailwind CSS
+
+Decision: Add Tailwind CSS to the frontend, starting at stage M0
+(Wails bootstrap).
+
+Reason:
+- Already used in `app/web` (Next.js portal, ADR 008) — keeps styling
+  approach consistent across the desktop app and web portal
+- Utility-first classes reduce one-off CSS files as the Wails frontend is
+  rebuilt
+
+Existing components keep their current styling; Tailwind is available for
+new/changed UI from M0 onward.
+
+Do not switch to: CSS Modules, styled-components, Sass
 
 ---
 
@@ -89,13 +135,21 @@ Do not switch to: npm, yarn, bun
 
 ---
 
-## Rust Edition: 2021
+## Rust Edition: 2021 (SUPERSEDED — see ADR 009)
 
-Decision: Use Rust edition 2021.
+Status: Superseded 2026-06-11. Backend is migrating to Go; this entry is kept
+for historical context until `Cargo.toml` workspace and `modules/*` Rust
+crates are removed.
+
+---
+
+## Go Version: 1.22+
+
+Decision: Use Go 1.22 or later for the Wails backend.
 
 Reason:
-- Already set in Cargo.toml
-- Latest stable edition at project init
+- Required by Wails v2 and `gen2brain/malgo`
+- Generics support used for shared pipeline types (audio buffers, chunks)
 
 ---
 

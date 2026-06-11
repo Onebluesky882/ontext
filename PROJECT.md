@@ -71,5 +71,12 @@ ontext/
 
 ## Status
 
-Stages 1-5 complete (see tasks/ and gate-outs/). Hotkey-driven recording
-(stage 1) was replaced by button-driven start/stop — see note in Description.
+Stages 1-6 complete on Tauri 2 + Rust (see tasks/ and gate-outs/).
+Hotkey-driven recording (stage 1) was replaced by button-driven start/stop —
+see note in Description.
+
+**Migration in progress:** the runtime is being migrated from Tauri/Rust to
+Wails/Go (see [ADR 009](docs/adrs/009-migrate-tauri-rust-to-wails-go.md) and
+DECISIONS.md). New stages M0-M5 in PIPELINE.md track this; M0
+(`tasks/stage-M0-wails-bootstrap.md`) is next up. The Tauri app and Rust
+modules remain in place and functional until cutover at stage M5.
