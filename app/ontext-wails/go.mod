@@ -9,6 +9,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/joho/godotenv v1.5.1
 	github.com/wailsapp/wails/v2 v2.12.0
+	golang.design/x/hotkey v0.6.1
 )
 
 require (
