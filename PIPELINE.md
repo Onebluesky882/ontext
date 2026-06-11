@@ -370,6 +370,129 @@ Acceptance Criteria:
 
 ---
 
+### Stage 14 — e2e speech-to-text verification
+
+Domain: `app/ontext-wails` (integration tests, no production code changes
+unless a bug is found in `internal/transcribe`)
+Branch: `feature/stage-14-e2e-speech-test`
+
+Goal:
+Run the full pipeline (`wails dev`) end-to-end: Start → speak → Stop → text
+pasted into focused input. Verify Thai and English transcription accuracy
+against Stage 09 contract, and confirm API timeout/error paths return
+structured errors (no panic).
+
+Input: none
+
+Output: `gate-outs/stage-14-e2e-speech-test.md` with recorded test
+transcripts vs. expected text, and pass/fail per acceptance criterion
+
+Acceptance Criteria:
+- Thai speech produces correct Thai text, pasted into focused input
+- English speech produces correct English text, pasted into focused input
+- Simulated API timeout/error returns structured error, not panic
+- Results documented with actual transcript samples
+
+---
+
+### Stage 15 — hold-hotkey streaming UI (step-by-step Wails pages)
+
+Domain: `app/ontext-wails/frontend/src`, `app/ontext-wails/internal/hotkey`
+(wiring only — do not modify Stage 13 hotkey core logic without reporting in
+gate-out)
+Branch: `feature/stage-15-hotkey-streaming-ui`
+
+Goal:
+While hold-hotkey is active, stream partial transcript updates to the UI
+(like an `onChange` text input) using the existing Wails event bridge
+(`runtime.EventsEmit` / `EventsOn`, wired in Stage 11). Restructure the
+frontend into step-by-step pages:
+1. Permission request page (mic + accessibility)
+2. Hotkey status page (idle / recording / processing)
+3. Live transcript page (real-time streamed text)
+
+Input: `HotkeyEvent` (Start/Stop) from Stage 13, `transcribe.Result` stream
+
+Output: Wails UI with the three pages above, live-updating transcript text
+
+Constraints:
+- Do not change `internal/hotkey` core start/stop logic (Stage 13, DONE) —
+  if a change is needed, STOP and report in gate-out recommendations
+- Reuse existing event bindings from Stage 11; do not add new IPC patterns
+  without reporting
+
+Acceptance Criteria:
+- Holding hotkey streams partial transcript text live to the UI
+- UI navigates through the three pages in order on first run
+- Accessibility-permission-missing fallback (Stage 13) still shown correctly
+- `tsc` and `vite build` pass
+
+---
+
+### Stage 16 — macOS microphone & accessibility permission flow
+
+Domain: `app/ontext-wails` (Wails build config / `Info.plist` /
+entitlements), `frontend/src/pages/onboarding`
+Branch: `feature/stage-16-macos-permissions`
+
+Goal:
+Ensure the macOS build requests microphone access via
+`NSMicrophoneUsageDescription` (with a clear, user-facing reason string), and
+that the existing `PermissionStep.tsx` onboarding flow correctly triggers and
+reflects both Microphone and Accessibility permission prompts on first launch.
+
+Input: none
+
+Output: macOS build that prompts for Microphone permission on first mic
+access, and Accessibility permission for hotkey/paste (Stage 13)
+
+Constraints:
+- Do not change Tauri-era code (already removed per Stage 12) — macOS-only,
+  Wails build config
+- If permission is denied, app must not crash — must show a clear status in
+  the onboarding/permission UI
+
+Acceptance Criteria:
+- `Info.plist` (or Wails equivalent build config) contains
+  `NSMicrophoneUsageDescription` with a descriptive string
+- First launch triggers macOS microphone permission dialog
+- Accessibility permission prompt/flow verified against Stage 13 fallback
+- Denying either permission shows a clear in-app status, no crash
+
+---
+
+### Stage 17 — noise filtering / VAD accuracy verification
+
+Domain: `app/ontext-wails/internal/audio`, `app/ontext-wails/internal/vad`
+Branch: `feature/stage-17-noise-vad-accuracy`
+
+Goal:
+Verify the streaming RMS-VAD (Stage 08) correctly removes background noise
+(fan noise, keyboard typing, etc.) without dropping speech segments, and that
+`IsLikelyHallucination` thresholds (Stage 09) remain appropriate for noisy
+input. Test end-to-end transcription accuracy against real noisy-environment
+audio fixtures.
+
+Input: real-world audio fixtures with background noise
+
+Output: `gate-outs/stage-17-noise-vad-accuracy.md` documenting VAD
+segment boundaries vs. expected speech regions, and transcript accuracy
+results
+
+Constraints:
+- If `IsLikelyHallucination` thresholds need adjustment, document the change
+  and rationale in DECISIONS.md before modifying
+- Silence-only input must not produce empty chunks sent to the transcribe API
+
+Acceptance Criteria:
+- Noisy non-speech segments are filtered out; speech segments preserved
+- Threshold adjustments (if any) documented in DECISIONS.md with rationale
+- End-to-end transcript accuracy measured against noisy fixtures
+- Silent input yields no API calls, no panic
+- Unit tests pass with existing/added fixtures
+
+---
+
 ## Gate-Out Format
 
 Each stage must produce `gate-outs/stage-0X-<name>.md` before the next stage starts.
