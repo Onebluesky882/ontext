@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -12,6 +13,7 @@ import (
 	"ontext-wails/internal/audio"
 	"ontext-wails/internal/clipboard"
 	"ontext-wails/internal/focus"
+	"ontext-wails/internal/hotkey"
 	"ontext-wails/internal/httpapi"
 	"ontext-wails/internal/pipeline"
 	"ontext-wails/internal/transcribe"
@@ -30,9 +32,10 @@ type PasteResult struct {
 
 // App struct
 type App struct {
-	ctx      context.Context
-	pipeline *pipeline.Pipeline
-	focus    *focus.Manager
+	ctx       context.Context
+	pipeline  *pipeline.Pipeline
+	focus     *focus.Manager
+	hotkeyCtl *hotkey.Controller
 }
 
 // NewApp creates a new App application struct
@@ -69,6 +72,26 @@ func (a *App) startup(ctx context.Context) {
 
 	a.focus.Start()
 
+	a.hotkeyCtl = hotkey.NewController(hotkey.New(), pipelineToggler{a})
+	a.hotkeyCtl.OnSession = func(s hotkey.Session) {
+		// Reported to the usage-metering backend (ADR 010) once
+		// backend/ exists: POST /usage/events { startedAt, endedAt,
+		// durationMs }. For now, surface it to the frontend so the UI
+		// can display session length.
+		runtime.EventsEmit(a.ctx, "usage:session", map[string]any{
+			"startedAt":  s.StartedAt.Format(time.RFC3339Nano),
+			"endedAt":    s.EndedAt.Format(time.RFC3339Nano),
+			"durationMs": s.DurationMs(),
+		})
+	}
+	if err := a.hotkeyCtl.Start(); err != nil {
+		// Registration can fail if the binding is already taken by another
+		// app, or (on some platforms) if a required permission is missing.
+		// Degrade gracefully to button-only start/stop.
+		runtime.EventsEmit(a.ctx, "hotkey:unavailable", err.Error())
+		a.hotkeyCtl = nil
+	}
+
 	server := httpapi.New(a.pipeline)
 	go server.Listen(debugAPIAddr)
 }
@@ -76,6 +99,23 @@ func (a *App) startup(ctx context.Context) {
 // shutdown is called when the app is closing.
 func (a *App) shutdown(_ context.Context) {
 	a.focus.Stop()
+	if a.hotkeyCtl != nil {
+		a.hotkeyCtl.Close()
+	}
+}
+
+// pipelineToggler adapts App's pipeline to hotkey.Toggler so the global
+// hotkey can start/stop a recording session the same way the UI buttons do.
+type pipelineToggler struct {
+	app *App
+}
+
+func (t pipelineToggler) Start() {
+	go t.app.pipeline.Start(t.app.ctx)
+}
+
+func (t pipelineToggler) Stop() {
+	_ = t.app.pipeline.Stop()
 }
 
 // Greet returns a greeting for the given name

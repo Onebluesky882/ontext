@@ -9,6 +9,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/joho/godotenv v1.5.1
 	github.com/wailsapp/wails/v2 v2.12.0
+	golang.design/x/hotkey v0.6.1
 )
 
 require (
@@ -59,6 +60,7 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	golang.design/x/mainthread v0.3.1 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
 	golang.org/x/image v0.38.0 // indirect
