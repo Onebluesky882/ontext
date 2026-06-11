@@ -27,4 +27,4 @@ Rules:
   ```
 - This rule applies in every worktree — the `docs/adrs/` directory is shared via git
 
-**Current highest:** 008 — next new ADR must be 009
+**Current highest:** 010 — next new ADR must be 011
