@@ -4,6 +4,10 @@ Purpose
 
 This repository uses a multi-agent workflow.
 
+This repo (main) is the conductor/orchestrator checkout — see START_HERE.md.
+If you are a worker agent assigned to a PIPELINE.md stage, you should be
+operating in a separate branch/worktree for that stage's domain, not here.
+
 Every agent is a worker, not the owner of the project.
 
 The orchestrator controls:
