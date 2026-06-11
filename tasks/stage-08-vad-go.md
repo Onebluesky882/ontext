@@ -1,6 +1,6 @@
 # Stage 08 — vad (Go)
 
-Status: TODO
+Status: DONE
 
 Domain: `app/ontext-wails/internal/vad` (Go package)
 Branch: `feature/stage-08-vad-go`
@@ -16,8 +16,9 @@ skeleton already exists:
 
 Implement an RMS-based `Detector` to replace `NoopDetector`.
 
-Assigned To: (unassigned)
-Started At: (unset)
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-11
+Completed At: 2026-06-11
 
 ---
 
