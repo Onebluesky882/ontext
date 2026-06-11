@@ -1,6 +1,6 @@
 # Stage 09 — transcribe (Go)
 
-Status: IN_PROGRESS (largely implemented — needs review + tests + gate-out)
+Status: DONE
 
 Domain: `app/ontext-wails/internal/transcribe` (Go package)
 Branch: `feature/stage-09-transcribe-go`
@@ -26,23 +26,24 @@ HTTP server for success/error/timeout cases), and confirm the model choice
 specifies `whisper-large-v3-turbo`) and document/update DECISIONS.md if the
 model differs intentionally.
 
-Assigned To: (unassigned)
-Started At: (unset)
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-11
+Completed At: 2026-06-11
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 09), ADR 009
-- [ ] Confirm model choice (`whisper-large-v3` vs DECISIONS.md's
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 09), ADR 009
+- [x] Confirm model choice (`whisper-large-v3` vs DECISIONS.md's
       `whisper-large-v3-turbo`) — update DECISIONS.md or `groq.go` to match
-- [ ] Add mock-HTTP-server unit tests for: success response, API error
+- [x] Add mock-HTTP-server unit tests for: success response, API error
       status, timeout (no live `GROQ` key required)
-- [ ] Confirm `Transcribe` never panics on API failure — returns `error`
-- [ ] Confirm hallucination thresholds match `modules/transcribe` (Rust):
+- [x] Confirm `Transcribe` never panics on API failure — returns `error`
+- [x] Confirm hallucination thresholds match `modules/transcribe` (Rust):
       `NoSpeechProbThreshold=0.5`, `AvgLogprobThreshold=-1.0`,
       `CompressionRatioThreshold=2.4`
-- [ ] Build passes
-- [ ] Create gate-outs/stage-09-transcribe-go.md
+- [x] Build passes
+- [x] Create gate-outs/stage-09-transcribe-go.md
 
 ---
 
