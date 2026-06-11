@@ -1,5 +1,12 @@
 # Agent Rules
 
+## Before Starting Any Task
+
+If you are a worker agent assigned to a PIPELINE.md stage:
+1. Read START_HERE.md first
+2. Read AGENT_RULES.md
+3. Confirm your assigned stage's `tasks/stage-XX-<name>.md` has Status: READY/IN_PROGRESS before beginning work
+
 ## ADR Numbering
 
 **MANDATORY — do this before creating any ADR, no exceptions:**
