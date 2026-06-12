@@ -1,6 +1,6 @@
 # Stage 16 — macOS microphone & accessibility permission flow
 
-Status: READY
+Status: DONE
 
 Domain: `app/ontext-wails` (Wails build config / `Info.plist` /
 entitlements), `frontend/src/pages/onboarding`
@@ -13,23 +13,24 @@ that the existing `PermissionStep.tsx` onboarding flow correctly triggers and
 reflects both Microphone and Accessibility permission prompts on first
 launch. Must not crash if either permission is denied.
 
-Assigned To: (unassigned)
-Started At: -
-Completed At: -
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-12
+Completed At: 2026-06-12
+Status: DONE
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 16)
-- [ ] Check Wails macOS build config / `Info.plist` for
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 16)
+- [x] Check Wails macOS build config / `Info.plist` for
       `NSMicrophoneUsageDescription` — add with descriptive string if missing
-- [ ] Verify first-launch macOS microphone permission dialog appears
-- [ ] Verify Accessibility permission prompt/flow (ties into Stage 13
+- [x] Verify first-launch macOS microphone permission dialog appears
+- [x] Verify Accessibility permission prompt/flow (ties into Stage 13
       fallback behavior)
-- [ ] Update `PermissionStep.tsx` if needed to reflect both permission states
+- [x] Update `PermissionStep.tsx` if needed to reflect both permission states
       clearly
-- [ ] Test denial of each permission — confirm no crash, clear in-app status
-- [ ] Create gate-outs/stage-16-macos-permissions.md
+- [x] Test denial of each permission — confirm no crash, clear in-app status
+- [x] Create gate-outs/stage-16-macos-permissions.md
 
 ---
 

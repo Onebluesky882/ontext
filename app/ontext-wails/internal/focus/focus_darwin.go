@@ -4,9 +4,10 @@ package focus
 
 /*
 #cgo CFLAGS: -x objective-c -fobjc-arc
-#cgo LDFLAGS: -framework AppKit -framework ApplicationServices
+#cgo LDFLAGS: -framework AppKit -framework ApplicationServices -framework AVFoundation
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
+#import <AVFoundation/AVFoundation.h>
 #include <stdlib.h>
 
 static char *focus_frontmost_bundle_id(void) {
@@ -46,6 +47,22 @@ static int focus_is_accessibility_trusted(void) {
 static void focus_request_accessibility_permission(void) {
     NSDictionary *options = @{(__bridge id)kAXTrustedCheckOptionPrompt: @YES};
     AXIsProcessTrustedWithOptions((CFDictionaryRef)options);
+}
+
+static int focus_microphone_permission_status(void) {
+    return (int)[AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+}
+
+static int focus_request_microphone_permission(void) {
+    if (focus_microphone_permission_status() != AVAuthorizationStatusNotDetermined) {
+        return focus_microphone_permission_status();
+    }
+    dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {
+        dispatch_semaphore_signal(sem);
+    }];
+    dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+    return focus_microphone_permission_status();
 }
 */
 import "C"
@@ -92,4 +109,12 @@ func isAccessibilityTrusted() bool {
 
 func requestAccessibilityPermission() {
 	C.focus_request_accessibility_permission()
+}
+
+func microphonePermissionStatus() MicrophonePermission {
+	return MicrophonePermission(C.focus_microphone_permission_status())
+}
+
+func requestMicrophonePermission() MicrophonePermission {
+	return MicrophonePermission(C.focus_request_microphone_permission())
 }

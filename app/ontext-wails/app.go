@@ -153,3 +153,25 @@ func (a *App) RequestAccessibilityPermission() error {
 	focus.RequestAccessibilityPermission()
 	return errors.New("accessibility permission not granted")
 }
+
+// PermissionStatus mirrors the frontend's PermissionStatus type
+// (frontend/src/types/events.ts).
+type PermissionStatus struct {
+	Accessibility bool   `json:"accessibility"`
+	Microphone    string `json:"microphone"`
+}
+
+// GetPermissionStatus reports ontext's current Accessibility and Microphone
+// permission state without prompting the user.
+func (a *App) GetPermissionStatus() PermissionStatus {
+	return PermissionStatus{
+		Accessibility: focus.IsAccessibilityTrusted(),
+		Microphone:    focus.MicrophonePermissionStatus().String(),
+	}
+}
+
+// RequestMicrophonePermission prompts the user for microphone access if the
+// permission has not yet been determined, and returns the resulting state.
+func (a *App) RequestMicrophonePermission() string {
+	return focus.RequestMicrophonePermission().String()
+}
