@@ -70,20 +70,21 @@ error-handling path.
      parsing/trimming for both languages, but do not exercise real model
      output.
 
-## Bug found in `internal/transcribe` (reported, fixed)
+## Model name: `whisper-large-v3` vs. DECISIONS.md (reported, not changed)
 
-`internal/transcribe/groq.go`: `defaultModel` was `"whisper-large-v3"`, but
+`internal/transcribe/groq.go` `defaultModel` is `"whisper-large-v3"`.
 DECISIONS.md (Transcription: Groq Whisper API) and PROJECT.md / the Stage 09
-contract specify `whisper-large-v3-turbo`. Since `app.go`'s
-`NewGroqTranscriber` relies on this default (no override), production calls
-were using the wrong model.
+contract description say `whisper-large-v3-turbo`. Per explicit instruction,
+the model has been kept as `whisper-large-v3` (an earlier pass of this gate-out
+had changed it to `whisper-large-v3-turbo` and updated
+`TestGroqTranscriber_RealAPI` accordingly; both have been reverted back to
+`whisper-large-v3`).
 
-Fix applied (in-domain, `internal/transcribe`):
-- `groq.go`: `defaultModel = "whisper-large-v3-turbo"`.
-- `groq_test.go`: updated `TestGroqTranscriber_RealAPI`'s assertion to expect
-  `whisper-large-v3-turbo`.
+This is flagged for the conductor to reconcile: either update DECISIONS.md /
+PROJECT.md to say `whisper-large-v3`, or confirm `whisper-large-v3-turbo` is
+the intended model and update `groq.go` separately.
 
-All `internal/transcribe` tests pass after this change.
+All `internal/transcribe` tests pass with `defaultModel = "whisper-large-v3"`.
 
 ## Acceptance criteria
 
