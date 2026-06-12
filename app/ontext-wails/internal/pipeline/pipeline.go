@@ -61,6 +61,11 @@ type Pipeline struct {
 
 	OnStatus func(Status)
 
+	// OnPartialTranscript is called with the cumulative transcript text
+	// each time a new segment is transcribed, so the UI can stream live
+	// updates while the session is running.
+	OnPartialTranscript func(text string)
+
 	mu     sync.Mutex
 	cancel context.CancelFunc
 }
@@ -107,6 +112,10 @@ func (p *Pipeline) Start(ctx context.Context) Result {
 			continue
 		}
 		textBuilder.WriteString(res.Text)
+
+		if p.OnPartialTranscript != nil {
+			p.OnPartialTranscript(textBuilder.String())
+		}
 
 		if p.Focus != nil {
 			if bundleID := p.Focus.LastFocusedApp(); bundleID != "" {

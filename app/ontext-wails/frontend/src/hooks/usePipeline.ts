@@ -4,12 +4,22 @@ import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime'
 import { useAppStore, type PipelineStatus } from '../store/appStore'
 
 export function usePipeline() {
-  const { status, setRunning, setStatus, setDone, reset } = useAppStore()
+  const { status, setRunning, setStatus, setDone, setPartialTranscript, setHotkeyUnavailable, reset } = useAppStore()
 
   useEffect(() => {
     EventsOn('status', (status: PipelineStatus) => setStatus(status))
     return () => EventsOff('status')
   }, [setStatus])
+
+  useEffect(() => {
+    EventsOn('transcript:partial', (text: string) => setPartialTranscript(text))
+    return () => EventsOff('transcript:partial')
+  }, [setPartialTranscript])
+
+  useEffect(() => {
+    EventsOn('hotkey:unavailable', (message: string) => setHotkeyUnavailable(message))
+    return () => EventsOff('hotkey:unavailable')
+  }, [setHotkeyUnavailable])
 
   const start = async () => {
     if (status === 'running') return

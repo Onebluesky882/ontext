@@ -1,6 +1,6 @@
 # Stage 15 — hold-hotkey streaming UI (step-by-step Wails pages)
 
-Status: READY
+Status: DONE
 
 Domain: `app/ontext-wails/frontend/src`, `app/ontext-wails/internal/hotkey`
 (wiring/event-bridge only — do not modify Stage 13 hotkey core start/stop
@@ -16,23 +16,23 @@ Restructure the frontend into step-by-step pages:
 2. Hotkey status page (idle / recording / processing)
 3. Live transcript page (real-time streamed text)
 
-Assigned To: (unassigned)
-Started At: -
-Completed At: -
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-12
+Completed At: 2026-06-12
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 15), Stage 13 + Stage 11 gate-outs
-- [ ] Confirm hold-hotkey Start/Stop (Stage 13) still works unmodified
-- [ ] Wire partial transcript events to live-update the UI text (onChange-style)
-- [ ] Build page 1: permission request (mic + accessibility), with fallback
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 15), Stage 13 + Stage 11 gate-outs
+- [x] Confirm hold-hotkey Start/Stop (Stage 13) still works unmodified
+- [x] Wire partial transcript events to live-update the UI text (onChange-style)
+- [x] Build page 1: permission request (mic + accessibility), with fallback
       message if Accessibility is missing (per Stage 13)
-- [ ] Build page 2: hotkey status (idle / recording / processing)
-- [ ] Build page 3: live transcript view
-- [ ] Wire page navigation (step-by-step flow on first run)
-- [ ] `tsc` and `vite build` pass
-- [ ] Create gate-outs/stage-15-hotkey-streaming-ui.md
+- [x] Build page 2: hotkey status (idle / recording / processing)
+- [x] Build page 3: live transcript view
+- [x] Wire page navigation (step-by-step flow on first run)
+- [x] `tsc` and `vite build` pass
+- [x] Create gate-outs/stage-15-hotkey-streaming-ui.md
 
 ---
 
