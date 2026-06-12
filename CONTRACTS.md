@@ -42,6 +42,21 @@ type Result struct {
 
 ---
 
+## autocorrect.Corrector
+
+```go
+type Corrector interface {
+    Correct(ctx context.Context, text string) (string, error)
+}
+```
+
+`Correct` fixes spelling/grammar/punctuation only — no rephrasing, no
+added/removed meaning, no commentary. On error, timeout, or empty response,
+callers must fall back to the original text (fail-open); `Correct` itself
+returns the error so the pipeline can decide, but must never panic.
+
+---
+
 ## clipboard.Writer
 
 ```go
@@ -62,6 +77,7 @@ descriptive error (`fmt.Errorf`), never an empty-string error.
 | audio       | Start/Stop signal   | `<-chan audio.Frame`                               |
 | vad         | `<-chan audio.Frame`| `<-chan vad.Segment`                               |
 | transcribe  | `vad.Segment`       | `transcribe.Result`                                |
+| autocorrect | `transcribe.Result.Text` (string) | corrected text (string)              |
 | focus       | —                   | last focused app bundle id; `Activate(bundleID)`   |
 | clipboard   | text (string)       | `error`                                            |
 
