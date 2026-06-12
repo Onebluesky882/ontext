@@ -86,14 +86,14 @@ Decision: Use Groq's OpenAI-compatible API as the default transcription backend 
 Reason:
 - OpenAI-compatible API — minimal code changes from prior OpenAI Whisper integration
 - Faster inference than OpenAI Whisper API
-- `whisper-large-v3-turbo` model optimized for low-latency, near real-time transcription
+- `whisper-large-v3` model used as the default for best accuracy
 - High accuracy across languages including Thai
 - No local model setup required
 - Easy to swap for local whisper.cpp if needed
 
 API base: `https://api.groq.com/openai/v1`
 Endpoint: `https://api.groq.com/openai/v1/audio/transcriptions`
-Model: `whisper-large-v3-turbo`
+Model: `whisper-large-v3`
 
 Alternative (future): whisper.cpp local model — document in DECISIONS.md when switching.
 
@@ -208,6 +208,21 @@ Do not switch to: Redux, Jotai
 
 ---
 
+## Repeated-Character Hallucination Filter (Stage 09, Go)
+
+Decision: `transcribe.Result.IsLikelyHallucination()` now also returns `true`
+when the trimmed transcript text is at least `RepeatedCharMinLength` (4)
+runes long and consists of a single character repeated throughout (e.g.
+"vvvvvvvvvvvv"), regardless of `NoSpeechProb`/`AvgLogprob`/`CompressionRatio`.
+
+Reason: in production (`wails dev`, ONTEXT_DEBUG_CLEAR=1), a noise-only
+segment was transcribed by Groq Whisper as a long run of the letter "v". The
+existing confidence-based thresholds did not flag this result, so the
+pipeline cleared the focused field and pasted "vvvvvvvvvvvv..." into the
+terminal and other focused input boxes. A repeated-single-character result is
+never a meaningful transcript, so it is filtered independently of the
+Whisper confidence diagnostics.
+
 ## Hotkey Reintroduction (Stage 13, Go)
 
 Decision: reintroduce a global hotkey for the Wails app, implemented with
@@ -232,6 +247,36 @@ Reason for reversal:
   a status message (per Stage 13 acceptance criteria).
 - The button-driven Start/Stop UI from the Wails migration remains as the
   fallback path — this is additive, not a regression.
+
+---
+
+## AI Text Autocorrect (Stage 18)
+
+Decision: add a new `internal/autocorrect` module (see ADR 011), inserted
+into the pipeline between `transcribe` and `clipboard`. It calls the Groq
+chat-completions API with a small/fast instruction model to fix
+spelling/grammar/punctuation only, and fails open (returns the original text)
+on any error, timeout, or empty response. A `NoopCorrector` mirrors
+`transcribe.NoopTranscriber` for tests/environments without a Groq key.
+
+See ADR 011 for full context and consequences (added latency/cost per
+segment, candidate for future usage-billing inclusion per ADR 010).
+
+---
+
+## RNNoise Denoise (Stage 19)
+
+Decision: add a new `internal/denoise` module (see ADR 012), inserted into
+the pipeline between `audio` and `vad`. It applies RNNoise-based noise
+suppression to each `audio.Frame`, returning a denoised frame of the same
+length and sample rate. Implemented via a cgo binding to `librnnoise`
+(Xiph.Org), and fails open (returns the original frame) on init/runtime
+error. A `NoopDenoiser` mirrors `transcribe.NoopTranscriber` and
+`autocorrect.NoopCorrector` for tests/platforms without a working RNNoise
+build.
+
+See ADR 012 for full context and consequences (cross-platform cgo build
+requirement, possible RMS-VAD threshold re-tuning).
 
 ---
 

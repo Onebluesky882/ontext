@@ -17,6 +17,21 @@ type Frame struct {
 
 ---
 
+## denoise.Denoiser
+
+```go
+type Denoiser interface {
+    Denoise(frame audio.Frame) audio.Frame
+}
+```
+
+`Denoise` returns an `audio.Frame` with the same `len(Samples)` and
+`SampleRate` as the input — only sample values may change. Implementations
+must not panic; on RNNoise init/runtime failure, return the input `frame`
+unchanged (fail-open).
+
+---
+
 ## vad.Segment
 
 ```go
@@ -42,6 +57,21 @@ type Result struct {
 
 ---
 
+## autocorrect.Corrector
+
+```go
+type Corrector interface {
+    Correct(ctx context.Context, text string) (string, error)
+}
+```
+
+`Correct` fixes spelling/grammar/punctuation only — no rephrasing, no
+added/removed meaning, no commentary. On error, timeout, or empty response,
+callers must fall back to the original text (fail-open); `Correct` itself
+returns the error so the pipeline can decide, but must never panic.
+
+---
+
 ## clipboard.Writer
 
 ```go
@@ -60,8 +90,10 @@ descriptive error (`fmt.Errorf`), never an empty-string error.
 | Module      | Input               | Output                                            |
 |-------------|---------------------|----------------------------------------------------|
 | audio       | Start/Stop signal   | `<-chan audio.Frame`                               |
+| denoise     | `audio.Frame`       | `audio.Frame` (denoised, same shape)               |
 | vad         | `<-chan audio.Frame`| `<-chan vad.Segment`                               |
 | transcribe  | `vad.Segment`       | `transcribe.Result`                                |
+| autocorrect | `transcribe.Result.Text` (string) | corrected text (string)              |
 | focus       | —                   | last focused app bundle id; `Activate(bundleID)`   |
 | clipboard   | text (string)       | `error`                                            |
 

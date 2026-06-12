@@ -4,6 +4,8 @@ package transcribe
 
 import (
 	"context"
+	"strings"
+	"unicode/utf8"
 
 	"ontext-wails/internal/vad"
 )
@@ -27,6 +29,13 @@ const (
 	NoSpeechProbThreshold     = 0.5
 	AvgLogprobThreshold       = -1.0
 	CompressionRatioThreshold = 2.4
+
+	// RepeatedCharMinLength is the minimum trimmed transcript length at
+	// which a single repeated character (e.g. "vvvvvvvvvvvv") is treated as
+	// a hallucination, even when the Whisper confidence diagnostics above
+	// don't flag it. See DECISIONS.md ("Repeated-character hallucination
+	// filter").
+	RepeatedCharMinLength = 4
 )
 
 // IsLikelyHallucination reports whether the result's confidence diagnostics
@@ -34,7 +43,24 @@ const (
 func (r Result) IsLikelyHallucination() bool {
 	return r.NoSpeechProb > NoSpeechProbThreshold ||
 		r.AvgLogprob < AvgLogprobThreshold ||
-		r.CompressionRatio > CompressionRatioThreshold
+		r.CompressionRatio > CompressionRatioThreshold ||
+		isRepeatedChar(r.Text)
+}
+
+// isRepeatedChar reports whether text, once trimmed, is long enough and
+// consists of a single rune repeated throughout (e.g. "vvvvvvvvvvvv").
+func isRepeatedChar(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if utf8.RuneCountInString(trimmed) < RepeatedCharMinLength {
+		return false
+	}
+	first, _ := utf8.DecodeRuneInString(trimmed)
+	for _, r := range trimmed {
+		if r != first {
+			return false
+		}
+	}
+	return true
 }
 
 // Transcriber converts a speech segment into text.

@@ -3,6 +3,7 @@ package vad
 import (
 	"context"
 	"math"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -22,6 +23,18 @@ func makeTone(freqHz float64, sampleRate int, durationMs int) []float32 {
 	for i := range out {
 		t := float64(i) / float64(sampleRate)
 		out[i] = float32(math.Sin(2*math.Pi*freqHz*t) * 0.8)
+	}
+	return out
+}
+
+// makeNoise returns n samples of pseudo-random noise with the given peak
+// amplitude, simulating background noise such as fan hum or keyboard clatter.
+// A fixed seed keeps the fixture deterministic across test runs.
+func makeNoise(amplitude float32, n int) []float32 {
+	r := rand.New(rand.NewSource(42))
+	out := make([]float32, n)
+	for i := range out {
+		out[i] = (r.Float32()*2 - 1) * amplitude
 	}
 	return out
 }
@@ -165,6 +178,79 @@ func TestRMSDetector_ContextCancel(t *testing.T) {
 	case <-done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("Detect goroutine did not exit after ctx cancel")
+	}
+}
+
+// --- Noise fixtures (Stage 17) ---
+
+// TestRMSDetector_FanNoiseFiltered simulates continuous low-level fan/AC
+// hum (RMS well below the 0.02 threshold). It must not be classified as
+// speech, so no segments — and therefore no transcription API calls —
+// should be produced.
+func TestRMSDetector_FanNoiseFiltered(t *testing.T) {
+	samples := makeNoise(0.005, 16000*2) // 2s of quiet fan noise
+
+	ch := make(chan audio.Frame, 256)
+	go sendFrames(ch, samples, 16000)
+
+	det := NewRMSDetector()
+	out := det.Detect(context.Background(), ch)
+	segs := collectSegments(out)
+
+	if len(segs) != 0 {
+		t.Fatalf("fan noise below threshold should produce no segments, got %d", len(segs))
+	}
+}
+
+// TestRMSDetector_KeyboardClickDiscarded simulates a short keyboard click —
+// a brief burst of louder noise above the RMS threshold but shorter than
+// minChunkMs. It should be discarded like any other short non-speech burst.
+func TestRMSDetector_KeyboardClickDiscarded(t *testing.T) {
+	samples := makeNoise(0.1, 16000*150/1000) // 150ms click, above threshold
+
+	ch := make(chan audio.Frame, 64)
+	go sendFrames(ch, samples, 16000)
+
+	det := NewRMSDetector()
+	out := det.Detect(context.Background(), ch)
+	segs := collectSegments(out)
+
+	if len(segs) != 0 {
+		t.Fatalf("short keyboard click below minChunkMs should be discarded, got %d segment(s)", len(segs))
+	}
+}
+
+// TestRMSDetector_SpeechWithBackgroundNoisePreserved simulates a speech
+// segment recorded with continuous low-level background noise (fan hum)
+// mixed in. The speech segment must still be detected and preserved.
+func TestRMSDetector_SpeechWithBackgroundNoisePreserved(t *testing.T) {
+	sr := 16000
+	noise := func(ms int) []float32 { return makeNoise(0.005, sr*ms/1000) }
+
+	speechWithNoise := makeTone(400, sr, 600)
+	bg := makeNoise(0.005, len(speechWithNoise))
+	for i := range speechWithNoise {
+		speechWithNoise[i] += bg[i]
+	}
+
+	samples := noise(300)
+	samples = append(samples, speechWithNoise...)
+	samples = append(samples, noise(300)...)
+
+	ch := make(chan audio.Frame, 128)
+	go sendFrames(ch, samples, sr)
+
+	det := NewRMSDetector()
+	out := det.Detect(context.Background(), ch)
+	segs := collectSegments(out)
+
+	if len(segs) == 0 {
+		t.Fatal("expected speech segment to survive background noise, got none")
+	}
+	for _, s := range segs {
+		if len(s.Samples) == 0 {
+			t.Error("segment has zero samples")
+		}
 	}
 }
 
