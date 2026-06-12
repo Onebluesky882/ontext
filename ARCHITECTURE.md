@@ -14,9 +14,9 @@ The React frontend handles UI state only.
 ┌─────────────────────────────────────────────────┐
 │              Wails Backend (Go)                  │
 │                                                  │
-│  ┌──────────┐    ┌───────────┐                  │
-│  │  audio   │───▶│    vad    │                  │
-│  └──────────┘    └─────┬─────┘                  │
+│  ┌──────────┐    ┌──────────┐    ┌───────────┐  │
+│  │  audio   │───▶│ denoise  │───▶│    vad    │  │
+│  └──────────┘    └──────────┘    └─────┬─────┘  │
 │                        │                         │
 │               ┌────────▼──────┐                  │
 │               │  transcribe   │                  │
@@ -44,8 +44,15 @@ The React frontend handles UI state only.
 - Output: `audio.Frame { Samples []float32, SampleRate int }`
 - Library: `gen2brain/malgo`
 
+### internal/denoise
+- Input: `audio.Frame`
+- Apply RNNoise-based noise suppression to `Samples`
+- Output: denoised `audio.Frame` (same length, same `SampleRate`)
+- Fail-open: on RNNoise init/runtime failure, passes the frame through
+  unchanged
+
 ### internal/vad
-- Input: `<-chan audio.Frame`
+- Input: `<-chan audio.Frame` (denoised)
 - Detect speech segments, discard silence
 - Output: `<-chan vad.Segment` (non-silent segments only)
 - Streaming RMS-VAD (ported from Rust, no external dependency)
@@ -79,7 +86,7 @@ The React frontend handles UI state only.
 - Output: `error` (nil on success)
 
 ### internal/pipeline
-- Wires audio -> vad -> transcribe -> autocorrect -> focus -> clipboard together
+- Wires audio -> denoise -> vad -> transcribe -> autocorrect -> focus -> clipboard together
 - Each transcribed segment is pasted immediately (real-time, not buffered
   until Stop)
 - Emits `Status` (idle/running/done/error) via `OnStatus` callback, wired to
@@ -107,14 +114,16 @@ The React frontend handles UI state only.
 ```
 1. User clicks Start → App.StartPipeline()
 2. audio.Capturer.Start() → streams audio.Frame on a channel
-3. vad.Detector.Detect(frames) → streams vad.Segment on a channel
-4. For each segment:
+3. denoise.Denoiser.Denoise(frame) → denoised audio.Frame (falls back to
+   original frame on RNNoise failure)
+4. vad.Detector.Detect(denoised frames) → streams vad.Segment on a channel
+5. For each segment:
    a. transcribe.Transcriber.Transcribe(segment) → transcribe.Result
    b. if not empty/hallucination:
       i.  autocorrect.Corrector.Correct(result.Text) → corrected text
           (falls back to result.Text on error)
       ii. focus.Manager.Activate(lastFocusedApp)
    c. clipboard.Writer.Paste(correctedText) → pastes into active app
-5. Pipeline emits Status via OnStatus → runtime.EventsEmit("status", ...)
-6. User clicks Stop → App.StopRecording() cancels the session
+6. Pipeline emits Status via OnStatus → runtime.EventsEmit("status", ...)
+7. User clicks Stop → App.StopRecording() cancels the session
 ```

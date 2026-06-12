@@ -538,6 +538,52 @@ Acceptance Criteria:
 
 ---
 
+### Stage 19 — RNNoise denoise (pre-VAD noise suppression)
+
+Domain: `app/ontext-wails/internal/denoise`, `app/ontext-wails/internal/audio`, `app/ontext-wails/internal/vad`, `app/ontext-wails/internal/pipeline`
+Branch: `feature/stage-19-rnnoise-denoise`
+
+Goal:
+Add a new `internal/denoise` module (per ADR 012 and the
+`denoise.Denoiser` contract in CONTRACTS.md) that applies RNNoise-based noise
+suppression to each `audio.Frame` before it reaches `vad.Detector.Detect`,
+with a fail-open `denoise.NoopDenoiser` fallback. Wire it into
+`internal/pipeline` between `audio` and `vad`.
+
+Input: `audio.Frame` (Samples []float32, SampleRate 16000)
+
+Output: denoised `audio.Frame` (same shape/length/SampleRate), passed to
+`vad.Detector.Detect`
+
+Constraints:
+- Do not change `audio.Frame` or `vad.Segment` (Stage 07/Stage 08 contracts)
+- `denoise.Denoiser.Denoise` must preserve `audio.Frame.Samples` length and
+  `SampleRate` — only sample values may change
+- On RNNoise init/runtime failure, the pipeline must pass the original
+  `audio.Frame` through unchanged (fail-open) — never block or drop frames
+- Provide `denoise.NoopDenoiser` (returns input unchanged) for tests and for
+  platforms without a working RNNoise build, mirroring
+  `transcribe.NoopTranscriber` and `autocorrect.NoopCorrector`
+- If RMS-VAD thresholds (Stage 08/17) need adjustment due to pre-denoised
+  input, document the change and rationale in DECISIONS.md before modifying
+- If a cross-platform RNNoise build cannot be achieved, STOP and report in
+  gate-out.md under Known Issues/Recommendations rather than substituting a
+  different algorithm
+
+Acceptance Criteria:
+- `denoise.Denoiser` interface implemented exactly as specified in
+  CONTRACTS.md
+- RNNoise-backed denoiser reduces noise in sample noisy fixtures (e.g. Stage
+  17 fixtures) while preserving frame length and sample rate
+- Simulated RNNoise init/runtime failure falls back to passing frames through
+  unchanged; pipeline continues, no panic
+- `internal/pipeline` updated so `vad.Detector.Detect` receives denoised
+  frames
+- Any VAD threshold adjustments documented in DECISIONS.md with rationale
+- Unit tests pass (`go test ./internal/denoise/... ./internal/vad/... ./internal/pipeline/...`)
+
+---
+
 ## Gate-Out Format
 
 Each stage must produce `gate-outs/stage-0X-<name>.md` before the next stage starts.
