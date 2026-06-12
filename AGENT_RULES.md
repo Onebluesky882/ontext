@@ -352,6 +352,38 @@ Violation: pushing target/ or node_modules/ breaks other agents' builds and wast
 
 ⸻
 
+Conductor-Only Tasks
+
+Some tasks must be performed by the conductor directly and must NOT be
+assigned to a worker (sub-agent).
+
+A task is Conductor-Only when it requires:
+
+* Integration / composition of functions produced by multiple stages
+* End-to-end or cross-module testing once all parts are combined
+* Direct interaction with physical hardware (camera, microphone, speaker,
+  sensors, etc.) that cannot be isolated to a single stage's workspace
+* A GUI/desktop build (e.g. `wails dev`) that cannot run in a headless
+  worker sandbox
+* Live third-party API credentials (e.g. `GROQ` key) that are not present
+  in the worker's environment
+* Any verification that spans more than one stage's domain
+
+Rules:
+
+* In PIPELINE.md and tasks/stage-XX-*.md, mark such tasks explicitly:
+  `Assigned To: conductor` (do not assign to a worker model)
+* Workers must NOT be dispatched tasks marked `Assigned To: conductor`
+* If a worker discovers that completing their assigned task requires
+  hardware access, a GUI build, live API credentials, or cross-stage
+  integration, they must STOP and report it in gate-out.md under Known
+  Issues / Recommendations — the conductor will perform that part directly
+* Stage 14 (e2e speech-to-text) is the reference example: automated/unit
+  checks were worker-assignable and are done; the live mic/API/GUI run is
+  conductor-only and still pending.
+
+⸻
+
 Stop Condition
 
 After completing assigned work:

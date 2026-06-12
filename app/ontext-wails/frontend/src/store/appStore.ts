@@ -7,9 +7,13 @@ interface AppState {
   status: PipelineStatus
   lastText: string | null
   errorMessage: string | null
+  partialTranscript: string
+  hotkeyUnavailable: string | null
   setRunning: () => void
   setStatus: (status: PipelineStatus) => void
   setDone: (result: PasteResult, text?: string) => void
+  setPartialTranscript: (text: string) => void
+  setHotkeyUnavailable: (message: string) => void
   reset: () => void
 }
 
@@ -17,8 +21,10 @@ export const useAppStore = create<AppState>((set) => ({
   status: 'idle',
   lastText: null,
   errorMessage: null,
+  partialTranscript: '',
+  hotkeyUnavailable: null,
 
-  setRunning: () => set({ status: 'running', errorMessage: null }),
+  setRunning: () => set({ status: 'running', errorMessage: null, partialTranscript: '' }),
 
   setStatus: (status) => set({ status }),
 
@@ -28,6 +34,10 @@ export const useAppStore = create<AppState>((set) => ({
       lastText: text ?? null,
       errorMessage: result.error ?? null,
     }),
+
+  setPartialTranscript: (text) => set({ partialTranscript: text }),
+
+  setHotkeyUnavailable: (message) => set({ hotkeyUnavailable: message }),
 
   reset: () => set({ status: 'idle' }),
 }))

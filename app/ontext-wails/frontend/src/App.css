@@ -443,6 +443,33 @@ code {
   font-weight: 600;
 }
 
+/* ── Flow pages (permissions / hotkey status / live transcript) ── */
+.flow-permission__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.flow-transcript__box {
+  min-height: 140px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.flow-transcript__placeholder {
+  color: var(--text-secondary);
+}
+
 /* ── Welcome step ── */
 .ob-welcome {
   align-items: center;

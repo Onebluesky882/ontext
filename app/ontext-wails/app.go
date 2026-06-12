@@ -70,6 +70,9 @@ func (a *App) startup(ctx context.Context) {
 	a.pipeline.OnStatus = func(status pipeline.Status) {
 		runtime.EventsEmit(a.ctx, "status", string(status))
 	}
+	a.pipeline.OnPartialTranscript = func(text string) {
+		runtime.EventsEmit(a.ctx, "transcript:partial", text)
+	}
 
 	a.focus.Start()
 
