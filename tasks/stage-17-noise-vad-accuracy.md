@@ -1,6 +1,6 @@
 # Stage 17 — noise filtering / VAD accuracy verification
 
-Status: READY
+Status: DONE
 
 Domain: `app/ontext-wails/internal/audio`, `app/ontext-wails/internal/vad`
 Branch: `feature/stage-17-noise-vad-accuracy`
@@ -12,24 +12,24 @@ Verify the streaming RMS-VAD (Stage 08) correctly removes background noise
 input. Test end-to-end transcription accuracy against real noisy-environment
 audio fixtures.
 
-Assigned To: (unassigned)
-Started At: -
-Completed At: -
+Assigned To: claude-sonnet-4-6
+Started At: 2026-06-12
+Completed At: 2026-06-12
 
 ---
 
 Checklist:
-- [ ] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 17), Stage 08 + Stage 09 gate-outs
-- [ ] Gather/prepare noisy audio fixtures (fan noise, keyboard, ambient speech)
-- [ ] Run streaming RMS-VAD against fixtures — verify noise filtered,
+- [x] Read PROJECT.md, ARCHITECTURE.md, CONTRACTS.md, DECISIONS.md, PIPELINE.md (Stage 17), Stage 08 + Stage 09 gate-outs
+- [x] Gather/prepare noisy audio fixtures (fan noise, keyboard, ambient speech)
+- [x] Run streaming RMS-VAD against fixtures — verify noise filtered,
       speech segments preserved with correct timestamps
-- [ ] Review `IsLikelyHallucination` thresholds against noisy-input results —
+- [x] Review `IsLikelyHallucination` thresholds against noisy-input results —
       if adjustment needed, document rationale in DECISIONS.md before changing
-- [ ] Run end-to-end transcription on noisy fixtures — measure accuracy vs.
+- [x] Run end-to-end transcription on noisy fixtures — measure accuracy vs.
       expected text
-- [ ] Confirm silence-only input yields no API calls and no panic
-- [ ] Unit tests pass (existing + any new fixtures)
-- [ ] Create gate-outs/stage-17-noise-vad-accuracy.md
+- [x] Confirm silence-only input yields no API calls and no panic
+- [x] Unit tests pass (existing + any new fixtures)
+- [x] Create gate-outs/stage-17-noise-vad-accuracy.md
 
 ---
 
