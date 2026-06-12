@@ -249,6 +249,22 @@ segment, candidate for future usage-billing inclusion per ADR 010).
 
 ---
 
+## RNNoise Denoise (Stage 19)
+
+Decision: add a new `internal/denoise` module (see ADR 012), inserted into
+the pipeline between `audio` and `vad`. It applies RNNoise-based noise
+suppression to each `audio.Frame`, returning a denoised frame of the same
+length and sample rate. Implemented via a cgo binding to `librnnoise`
+(Xiph.Org), and fails open (returns the original frame) on init/runtime
+error. A `NoopDenoiser` mirrors `transcribe.NoopTranscriber` and
+`autocorrect.NoopCorrector` for tests/platforms without a working RNNoise
+build.
+
+See ADR 012 for full context and consequences (cross-platform cgo build
+requirement, possible RMS-VAD threshold re-tuning).
+
+---
+
 ## Branch Strategy
 
 Decision: feature branches only. Never commit directly to `main` or `dev`.

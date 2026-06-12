@@ -17,6 +17,21 @@ type Frame struct {
 
 ---
 
+## denoise.Denoiser
+
+```go
+type Denoiser interface {
+    Denoise(frame audio.Frame) audio.Frame
+}
+```
+
+`Denoise` returns an `audio.Frame` with the same `len(Samples)` and
+`SampleRate` as the input — only sample values may change. Implementations
+must not panic; on RNNoise init/runtime failure, return the input `frame`
+unchanged (fail-open).
+
+---
+
 ## vad.Segment
 
 ```go
@@ -75,6 +90,7 @@ descriptive error (`fmt.Errorf`), never an empty-string error.
 | Module      | Input               | Output                                            |
 |-------------|---------------------|----------------------------------------------------|
 | audio       | Start/Stop signal   | `<-chan audio.Frame`                               |
+| denoise     | `audio.Frame`       | `audio.Frame` (denoised, same shape)               |
 | vad         | `<-chan audio.Frame`| `<-chan vad.Segment`                               |
 | transcribe  | `vad.Segment`       | `transcribe.Result`                                |
 | autocorrect | `transcribe.Result.Text` (string) | corrected text (string)              |
