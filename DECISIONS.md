@@ -86,14 +86,14 @@ Decision: Use Groq's OpenAI-compatible API as the default transcription backend 
 Reason:
 - OpenAI-compatible API — minimal code changes from prior OpenAI Whisper integration
 - Faster inference than OpenAI Whisper API
-- `whisper-large-v3-turbo` model optimized for low-latency, near real-time transcription
+- `whisper-large-v3` model used as the default for best accuracy
 - High accuracy across languages including Thai
 - No local model setup required
 - Easy to swap for local whisper.cpp if needed
 
 API base: `https://api.groq.com/openai/v1`
 Endpoint: `https://api.groq.com/openai/v1/audio/transcriptions`
-Model: `whisper-large-v3-turbo`
+Model: `whisper-large-v3`
 
 Alternative (future): whisper.cpp local model — document in DECISIONS.md when switching.
 

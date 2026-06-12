@@ -33,7 +33,7 @@ as a fallback when Accessibility permission is missing.
 - Runtime: Wails v2
 - Frontend: React 19 + TypeScript + Vite
 - Backend: Go (1.22+)
-- Transcription: Groq Whisper API (whisper-large-v3-turbo, language=th)
+- Transcription: Groq Whisper API (whisper-large-v3, language=th)
 
 ## Core Flow
 
