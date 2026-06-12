@@ -56,6 +56,14 @@ The React frontend handles UI state only.
 - Output: `transcribe.Result { Text, Language, NoSpeechProb, AvgLogprob, CompressionRatio }`
 - Filters likely hallucinations via `Result.IsLikelyHallucination()`
 
+### internal/autocorrect
+- Input: `transcribe.Result.Text` (string)
+- Send to Groq chat-completion API (small/fast instruction model) to fix
+  spelling/grammar/punctuation only — no rephrasing
+- Output: corrected text (string)
+- Fail-open: on error/timeout/empty response, falls back to the original
+  text unchanged
+
 ### internal/focus
 - Tracks the frontmost application (excluding ontext itself) via cgo +
   AppKit/CoreFoundation (macOS only; no-op on other platforms)
@@ -71,7 +79,7 @@ The React frontend handles UI state only.
 - Output: `error` (nil on success)
 
 ### internal/pipeline
-- Wires audio -> vad -> transcribe -> focus -> clipboard together
+- Wires audio -> vad -> transcribe -> autocorrect -> focus -> clipboard together
 - Each transcribed segment is pasted immediately (real-time, not buffered
   until Stop)
 - Emits `Status` (idle/running/done/error) via `OnStatus` callback, wired to
@@ -102,8 +110,11 @@ The React frontend handles UI state only.
 3. vad.Detector.Detect(frames) → streams vad.Segment on a channel
 4. For each segment:
    a. transcribe.Transcriber.Transcribe(segment) → transcribe.Result
-   b. if not empty/hallucination: focus.Manager.Activate(lastFocusedApp)
-   c. clipboard.Writer.Paste(result.Text) → pastes into active app
+   b. if not empty/hallucination:
+      i.  autocorrect.Corrector.Correct(result.Text) → corrected text
+          (falls back to result.Text on error)
+      ii. focus.Manager.Activate(lastFocusedApp)
+   c. clipboard.Writer.Paste(correctedText) → pastes into active app
 5. Pipeline emits Status via OnStatus → runtime.EventsEmit("status", ...)
 6. User clicks Stop → App.StopRecording() cancels the session
 ```

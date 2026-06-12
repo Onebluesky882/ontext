@@ -235,6 +235,20 @@ Reason for reversal:
 
 ---
 
+## AI Text Autocorrect (Stage 18)
+
+Decision: add a new `internal/autocorrect` module (see ADR 011), inserted
+into the pipeline between `transcribe` and `clipboard`. It calls the Groq
+chat-completions API with a small/fast instruction model to fix
+spelling/grammar/punctuation only, and fails open (returns the original text)
+on any error, timeout, or empty response. A `NoopCorrector` mirrors
+`transcribe.NoopTranscriber` for tests/environments without a Groq key.
+
+See ADR 011 for full context and consequences (added latency/cost per
+segment, candidate for future usage-billing inclusion per ADR 010).
+
+---
+
 ## Branch Strategy
 
 Decision: feature branches only. Never commit directly to `main` or `dev`.

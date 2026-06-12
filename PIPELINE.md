@@ -493,6 +493,51 @@ Acceptance Criteria:
 
 ---
 
+### Stage 18 — AI text autocorrect (post-transcribe recheck)
+
+Domain: `app/ontext-wails/internal/autocorrect`, `app/ontext-wails/internal/pipeline`
+Branch: `feature/stage-18-ai-autocorrect`
+
+Goal:
+Add a new `internal/autocorrect` module (per ADR 011 and the
+`autocorrect.Corrector` contract in CONTRACTS.md) that takes the raw
+`transcribe.Result.Text` and returns a spelling/grammar/punctuation-corrected
+version via a Groq chat-completion call, with a fail-open `NoopCorrector`
+fallback. Wire it into `internal/pipeline` between `transcribe` and
+`clipboard`.
+
+Input: `transcribe.Result.Text` (string)
+
+Output: corrected text (string), pasted via `clipboard.Writer.Paste`
+
+Constraints:
+- Do not change `transcribe.Result` or `vad.Segment` (Stage 09/Stage 08
+  contracts)
+- `autocorrect.Corrector.Correct` must not rephrase or change meaning —
+  spelling/grammar/punctuation fixes only
+- On Groq API error, timeout, or empty/unchanged response, the pipeline must
+  paste the original `transcribe.Result.Text` unchanged (fail-open) — never
+  block or drop the segment
+- Empty/whitespace-only `transcribe.Result.Text` must skip the autocorrect
+  call entirely (no API call for empty input)
+- Provide `autocorrect.NoopCorrector` (returns input unchanged) for tests and
+  for environments without a Groq key, mirroring
+  `transcribe.NoopTranscriber`
+
+Acceptance Criteria:
+- `autocorrect.Corrector` interface implemented exactly as specified in
+  CONTRACTS.md
+- Groq-backed corrector fixes spelling/grammar/punctuation errors on sample
+  inputs without altering meaning
+- Simulated API error/timeout falls back to original text; pipeline
+  continues and pastes original text, no panic
+- Empty input produces no API call and no error
+- `internal/pipeline` updated so `clipboard.Writer.Paste` receives the
+  corrected text (or original text on fallback)
+- Unit tests pass (`go test ./internal/autocorrect/... ./internal/pipeline/...`)
+
+---
+
 ## Gate-Out Format
 
 Each stage must produce `gate-outs/stage-0X-<name>.md` before the next stage starts.
