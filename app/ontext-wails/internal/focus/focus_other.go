@@ -15,3 +15,7 @@ func activateBundleID(_ string) error { return nil }
 func isAccessibilityTrusted() bool { return true }
 
 func requestAccessibilityPermission() {}
+
+func microphonePermissionStatus() MicrophonePermission { return MicrophoneAuthorized }
+
+func requestMicrophonePermission() MicrophonePermission { return MicrophoneAuthorized }

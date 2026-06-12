@@ -110,3 +110,42 @@ func IsAccessibilityTrusted() bool {
 func RequestAccessibilityPermission() {
 	requestAccessibilityPermission()
 }
+
+// MicrophonePermission mirrors macOS's AVAuthorizationStatus for the audio
+// media type. On non-macOS platforms it is always MicrophoneAuthorized.
+type MicrophonePermission int
+
+const (
+	MicrophoneNotDetermined MicrophonePermission = iota
+	MicrophoneRestricted
+	MicrophoneDenied
+	MicrophoneAuthorized
+)
+
+// String returns a lowercase identifier for the permission state, suitable
+// for sending to the frontend.
+func (p MicrophonePermission) String() string {
+	switch p {
+	case MicrophoneAuthorized:
+		return "authorized"
+	case MicrophoneDenied:
+		return "denied"
+	case MicrophoneRestricted:
+		return "restricted"
+	default:
+		return "not_determined"
+	}
+}
+
+// MicrophonePermissionStatus reports ontext's current microphone
+// authorization state without prompting the user.
+func MicrophonePermissionStatus() MicrophonePermission {
+	return microphonePermissionStatus()
+}
+
+// RequestMicrophonePermission prompts the user for microphone access if the
+// permission has not yet been determined, blocking until the user responds.
+// If permission has already been granted or denied, it returns immediately.
+func RequestMicrophonePermission() MicrophonePermission {
+	return requestMicrophonePermission()
+}

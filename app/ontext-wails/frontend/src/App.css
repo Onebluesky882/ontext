@@ -621,3 +621,36 @@ code {
   text-align: center;
   letter-spacing: -0.1px;
 }
+.ob-permission__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: left;
+}
+.ob-permission__section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent);
+}
+.ob-permission__section-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+.ob-permission__status {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.ob-permission__status--ok {
+  color: var(--success);
+}
+.ob-permission__status--warn {
+  color: var(--warning, #d97706);
+}
