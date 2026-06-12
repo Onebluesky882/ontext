@@ -208,6 +208,21 @@ Do not switch to: Redux, Jotai
 
 ---
 
+## Repeated-Character Hallucination Filter (Stage 09, Go)
+
+Decision: `transcribe.Result.IsLikelyHallucination()` now also returns `true`
+when the trimmed transcript text is at least `RepeatedCharMinLength` (4)
+runes long and consists of a single character repeated throughout (e.g.
+"vvvvvvvvvvvv"), regardless of `NoSpeechProb`/`AvgLogprob`/`CompressionRatio`.
+
+Reason: in production (`wails dev`, ONTEXT_DEBUG_CLEAR=1), a noise-only
+segment was transcribed by Groq Whisper as a long run of the letter "v". The
+existing confidence-based thresholds did not flag this result, so the
+pipeline cleared the focused field and pasted "vvvvvvvvvvvv..." into the
+terminal and other focused input boxes. A repeated-single-character result is
+never a meaningful transcript, so it is filtered independently of the
+Whisper confidence diagnostics.
+
 ## Hotkey Reintroduction (Stage 13, Go)
 
 Decision: reintroduce a global hotkey for the Wails app, implemented with

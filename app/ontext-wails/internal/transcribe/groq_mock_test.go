@@ -185,6 +185,9 @@ func TestIsLikelyHallucination(t *testing.T) {
 		{"high no_speech_prob", Result{NoSpeechProb: 0.6, AvgLogprob: -0.5, CompressionRatio: 1.5}, true},
 		{"low avg_logprob", Result{NoSpeechProb: 0.1, AvgLogprob: -1.5, CompressionRatio: 1.5}, true},
 		{"high compression_ratio", Result{NoSpeechProb: 0.1, AvgLogprob: -0.5, CompressionRatio: 3.0}, true},
+		{"repeated char text", Result{Text: "vvvvvvvvvvvv", NoSpeechProb: 0.1, AvgLogprob: -0.5, CompressionRatio: 1.5}, true},
+		{"short repeated char text", Result{Text: "vv", NoSpeechProb: 0.1, AvgLogprob: -0.5, CompressionRatio: 1.5}, false},
+		{"normal text not flagged", Result{Text: "สวัสดีครับ", NoSpeechProb: 0.1, AvgLogprob: -0.5, CompressionRatio: 1.5}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
