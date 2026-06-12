@@ -24,8 +24,8 @@ func TestGroqTranscriber_RealAPI(t *testing.T) {
 	samples := make([]float32, sampleRate) // 1s of silence
 
 	tr := NewGroqTranscriber(apiKey)
-	if tr.Model != "whisper-large-v3" {
-		t.Fatalf("expected default model whisper-large-v3, got %q", tr.Model)
+	if tr.Model != "whisper-large-v3-turbo" {
+		t.Fatalf("expected default model whisper-large-v3-turbo, got %q", tr.Model)
 	}
 
 	result, err := tr.Transcribe(context.Background(), vad.Segment{

@@ -16,7 +16,7 @@ import (
 
 const (
 	defaultBaseURL = "https://api.groq.com/openai"
-	defaultModel   = "whisper-large-v3"
+	defaultModel   = "whisper-large-v3-turbo"
 	defaultTimeout = 30 * time.Second
 )
 
