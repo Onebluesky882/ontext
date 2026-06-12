@@ -583,7 +583,6 @@ Acceptance Criteria:
 - Unit tests pass (`go test ./internal/denoise/... ./internal/vad/... ./internal/pipeline/...`)
 
 ---
-
 ## Gate-Out Format
 
 Each stage must produce `gate-outs/stage-0X-<name>.md` before the next stage starts.
